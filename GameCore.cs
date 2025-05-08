@@ -1,28 +1,59 @@
-﻿using DryIoc;
+﻿using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;
 using Hopeful.Asset;
+using Hopeful.Injection;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
-using System.ComponentModel.Composition;
 using System.Diagnostics;
+using System.Reflection;
 using System.Threading.Tasks;
+using TinyMessenger;
 
 namespace Hopeful;
 
-public class GameCore : Game, IGameServices
+public class GameCore : Game
 {
-    public Container Container { get; }
+    public static Vault RootVault { get; private set; } = null!;
 
-    [Import]
-    public Lazy<SystemRoot>? SystemRoot { get; } = null!;
+    [Inject]
+    public SystemRoot SystemRoot { get; } = null!;
 
-    [Import]
-    public Lazy<AssetManager>? Assets { get; } = null!;
+    [Inject]
+    public AssetManager Assets { get; } = null!;
 
     public GameTime CurrentGameTime { get; private set; } = null!;
 
-    public GameCore(Container container) => Container = container;
+    protected override void Initialize()
+    {
+        RootVault = new();
+        RootVault.ExtractService<TinyMessengerHub>();
+        RootVault.ExtractService<EntityStore>();
+        RootVault.ExtractService(new SystemRoot(RootVault.InjectService<EntityStore>()));
+
+        RootVault.LoadServices(Assembly.GetExecutingAssembly());
+        RootVault.LoadInjections(Assembly.GetExecutingAssembly());
+
+        base.Initialize();
+    }
+
+    /*private void InitializeMods()
+    {
+        List<string> paths = new();
+
+        foreach (var path in paths)
+        {
+        if (!_modLoader.TryLoadModAssembly(path, out var assembly) || !_modLoader.TryGetBaseMod(assembly!, out var mod)) continue;
+
+        var modContainer = c.CreateChild();
+        var store = InjectionData.GetService<EntityStore>();
+        modContainer.Register<SystemRoot>(Made.Of(() => new SystemRoot(store, mod!.ModId)), serviceKey: mod!.ModId); // make Lazy
+
+        c.RegisterExports(assembly);
+
+        // add to some list, later execute in GameCore.Update();
+        }
+    }*/
 
     protected override void LoadContent()
     {
@@ -34,7 +65,7 @@ public class GameCore : Game, IGameServices
         try
         {
             Stopwatch sw = Stopwatch.StartNew();
-            await Assets!.Value.LoadAllAssetsAsync("Assets");
+            await Assets.LoadAllAssetsAsync("Assets");
             sw.Stop();
 
             Debug.WriteLine($"All assets loaded. Time: {sw.ElapsedMilliseconds} ms");
@@ -42,10 +73,6 @@ public class GameCore : Game, IGameServices
         catch (Exception ex)
         {
             Debug.WriteLine($"Error loading assets: {ex.Message}");
-        }
-        finally
-        {
-            Container.Resolve<GlobalGraphics>().Texture2DAtlas = Assets!.Value.GetAsset<Texture2DAtlas>("GameAtlas");
         }
     }
 
@@ -63,8 +90,8 @@ public class GameCore : Game, IGameServices
 
     protected override void UnloadContent()
     {
-        Assets?.Value.Dispose();
-        Container.Dispose();
+        Assets.Dispose();
+        RootVault.Dispose();
         base.UnloadContent();
     }
 }
