@@ -1,20 +1,20 @@
 ﻿using Friflo.Engine.ECS;
-using Friflo.Engine.ECS.Systems;
 using Hopeful.Asset;
+using Hopeful.Injection;
+using Hopeful.Injection.System;
 using Hopeful.Utilities;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
-using System.ComponentModel.Composition;
 
 namespace Hopeful.Render;
 
-public class SpriteRenderSystem : QuerySystem<Sprite>
+public class SpriteRenderSystem : InjectQuerySystem<Sprite>
 {
-    [Import] // make another render system for mods
+    [Inject] // make another render system for mods
     private readonly AssetManager _assets = null!;
 
-    [Import]
+    [Inject]
     private readonly GlobalGraphics _graphics = null!;
 
     protected override void OnUpdate()

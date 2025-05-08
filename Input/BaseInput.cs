@@ -1,3 +1,4 @@
+using Hopeful.Injection;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 
@@ -28,6 +29,7 @@ public interface IInputListener
     void Update();
 }
 
+[Service]
 public class BaseInput : IInputListener
 {
     private MouseState _currentMouseState;

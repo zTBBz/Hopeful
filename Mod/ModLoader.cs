@@ -1,11 +1,12 @@
-﻿using System;
+﻿using Hopeful.Injection;
+using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 
 namespace Hopeful.Mod;
 
+[Service]
 public class ModLoader
 {
     public bool TryLoadModAssembly(string path, out Assembly? assembly)

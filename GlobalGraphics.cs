@@ -1,10 +1,12 @@
 ﻿using Hopeful.Asset;
+using Hopeful.Injection;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 
 namespace Hopeful;
 
+[Service]
 public class GlobalGraphics : IDisposable
 {
     public GraphicsDeviceManager GraphicsDeviceManager { get; private set; } = null!;

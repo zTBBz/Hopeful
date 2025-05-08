@@ -1,18 +1,17 @@
-﻿using DryIocAttributes;
-using Friflo.Engine.ECS;
-using Friflo.Engine.ECS.Systems;
+﻿using Friflo.Engine.ECS;
 using Hopeful.Asset;
+using Hopeful.Injection;
+using Hopeful.Injection.System;
 using Hopeful.Utilities;
-using System.ComponentModel.Composition;
 
 namespace Hopeful.Render.Texts;
 
-public class TextRenderSystem : QuerySystem<Text>
+public class TextRenderSystem : InjectQuerySystem<Text>
 {
-    [Import] // make another render system for mods
+    [Inject] // make another render system for mods
     private readonly AssetManager _assets = null!;
 
-    [Import]
+    [Inject]
     private readonly GlobalGraphics _graphics = null!;
 
     protected override void OnUpdate()

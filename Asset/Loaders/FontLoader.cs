@@ -1,10 +1,12 @@
 ﻿using FontStashSharp;
+using Hopeful.Injection;
 using System;
 using System.IO;
 using System.Threading.Tasks;
 
 namespace Hopeful.Asset.Loaders;
 
+[Service(AssetFormat.Font)]
 public class FontLoader : IAssetLoader
 {
     public Task<object> Load(string path)

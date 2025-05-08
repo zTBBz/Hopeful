@@ -1,10 +1,12 @@
-﻿using Microsoft.Xna.Framework.Graphics;
+﻿using Hopeful.Injection;
+using Microsoft.Xna.Framework.Graphics;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Threading.Tasks;
 
 namespace Hopeful.Asset.Loaders;
 
+[Service(AssetFormat.Shader)]
 public class ShaderLoader : IAssetLoader
 {
     [Import]

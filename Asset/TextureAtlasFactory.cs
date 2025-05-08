@@ -1,9 +1,9 @@
-﻿using Hopeful.Utilities;
+﻿using Hopeful.Injection;
+using Hopeful.Utilities;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.Linq;
 
 namespace Hopeful.Asset;
@@ -15,9 +15,10 @@ public interface ITextureAtlasFactory
     List<Texture2DAtlas> PackTextures(List<(string name, Texture2D texture)> textures, int maxAtlasSize);
 }
 
+[Service]
 public class TextureAtlasFactory : ITextureAtlasFactory
 {
-    [Import]
+    [Inject]
     private readonly GlobalGraphics _graphics = null!;
 
     public List<Texture2DAtlas> PackTextures(List<(string name, Texture2D texture)> textures, int maxAtlasSize)

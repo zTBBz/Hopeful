@@ -1,25 +1,19 @@
-﻿using DryIoc;
-using FontStashSharp;
+﻿using FontStashSharp;
 using Hopeful.Asset.Loaders;
+using Hopeful.Injection;
 using Hopeful.Utilities;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Concurrent;
-using System.ComponentModel.Composition;
 using System.IO;
 using System.Threading.Tasks;
 
 namespace Hopeful.Asset;
 
+[Service]
 public sealed class AssetManager
 {
-    [Import]
-    private static GlobalGraphics _graphics = null!;
-
-    [Import]
-    private static GameCore _game = null!;
-
     private readonly ConcurrentDictionary<string, object> _assetsCache = new();
 
     public event Action? OnAssetsLoaded;
@@ -84,7 +78,7 @@ public sealed class AssetManager
     {
         object? raw = null;
         var format = DetectFormat(assetPath);
-        var loader = _game.Container.Resolve<IAssetLoader>(serviceKey: format); // can be container.Resolve<KeyValuePair<CommandId, ICommand>[]>();
+        var loader = GameCore.RootVault.InjectService<IAssetLoader>(format);
         raw = await loader.Load(assetPath);
 
         return raw ?? throw new AssetLoadException(assetPath, "invalid file format.");

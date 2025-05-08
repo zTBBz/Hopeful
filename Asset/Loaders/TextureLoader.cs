@@ -1,12 +1,13 @@
-﻿using Microsoft.Xna.Framework.Graphics;
+﻿using Hopeful.Injection;
+using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.ComponentModel.Composition;
-using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 
 namespace Hopeful.Asset.Loaders;
 
+[Service(AssetFormat.Sprite)]
 public class TextureLoader : IAssetLoader
 {
     [Import]
@@ -16,7 +17,7 @@ public class TextureLoader : IAssetLoader
     {
         var extension = Path.GetExtension(path).ToLowerInvariant();
 
-        if (extension is ".dds")
+        /*if (extension is ".dds")
         {
             return Task.Run(async () =>
             {
@@ -28,7 +29,7 @@ public class TextureLoader : IAssetLoader
                 Debug.WriteLine($"Loaded DDS {path}: {stopwatch.ElapsedMilliseconds} ms");
                 return (object)raw;
             });
-        }
+        }*/
 
         if (extension is ".png" or ".jpg" or ".jpeg")
         {

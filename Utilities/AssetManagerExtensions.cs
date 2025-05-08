@@ -1,6 +1,5 @@
 ﻿using FontStashSharp;
 using Hopeful.Asset;
-using Hopeful.Assets;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.ComponentModel.Composition;
