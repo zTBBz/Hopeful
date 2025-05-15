@@ -1,7 +1,8 @@
-﻿using Friflo.Engine.ECS;
-using Friflo.Engine.ECS.Systems;
+﻿using Hopeful;
 
-namespace Hopeful.Injection.System;
+#pragma warning disable IDE0130 // Namespace does not match folder structure
+namespace Friflo.Engine.ECS.Systems;
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
 ///   <para>Represents the Dependency Injection class for QuerySystem.</para>

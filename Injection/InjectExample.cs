@@ -14,5 +14,13 @@ public class InjectExample
     [Inject]
     public GlobalGraphics Graphics = null!; // is just GlobalGraphics
 
-    public InjectExample() => GameCore.RootVault.Inject(this);
+    public InjectExample()
+    {
+        GameCore.RootVault.Inject(this);
+        // OR
+        var vault = new Vault();
+        vault.Inject(this);
+        // OR
+        var instanceWithInject = vault.CreateWithInjection<InjectExample>();
+    }
 }

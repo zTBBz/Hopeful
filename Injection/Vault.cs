@@ -18,34 +18,36 @@ public sealed class Vault : IDisposable
     public Vault(Vault parent)
     {
         _parent = parent;
-        //_injections = EnumerateInjections().ToDictionary(kvp => kvp.Key, kvp => kvp.Value); // maybe not need copy parent injections
         _services = EnumerateServices().ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
     }
 
-    private readonly Dictionary<Type, InjectionInfo[]> _injections = [];
-    private readonly Dictionary<(object?, Type), object> _services = [];
+    private readonly Dictionary<Type, InjectionInfo[]> _injections = []; // <ClientType, ClientTypeInjections[]>
+    private readonly Dictionary<(object?, Type), object> _services = []; // <(ServiceKey, ServiceType), ServiceInstance>
+
+    public T CreateWithInjection<T>() where T : class, new()
+    {
+        var instance = new T();
+        Inject(instance);
+        return instance;
+    }
 
     public void Inject(object client)
-        => InjectAll(client, client.GetType());
-
-    private void InjectAll(object client, Type type)
     {
-        if (_injections.TryGetValue(type, out var injections))
+        if (_injections.TryGetValue(client.GetType(), out var injections))
         {
             foreach (var injection in injections)
             {
-                object? instance = Resolve(injection.TypeToken, injection.IsOptional);
-                injection.Resolver.Resolve(injection, client, instance);
+                object? injectInstance = Resolve(injection.TypeToken, injection.IsOptional);
+                injection.Resolver.Resolve(injection, client, injectInstance);
             }
         }
-        else throw new InvalidOperationException($"Type {type} not have any Inject.");
     }
 
     private object? Resolve(Type type, bool isOptional)
     {
         object? injection = null;
 
-        if (type.TryGetCustomAttribute<ServiceAttribute>(out var service))
+        if (type.TryGetCustomAttribute<ServiceAttribute>(out var service)) // services supports interfaces. Need example go to AssetManager line 81.
             return InjectService(type, service.Key);
 
         // If the injection is required, attempt to create it
@@ -62,12 +64,9 @@ public sealed class Vault : IDisposable
 
     public void LoadInjections(Assembly assembly)
     {
-        var injections = FindInjections(assembly);
-        foreach (var typeInj in injections)
-        {
-            var type = typeInj[0].TypeToken;
-            _injections.Add(type, typeInj);
-        }
+        var entry = FindInjections(assembly);
+        foreach (var (type, injections) in entry)
+            _injections.Add(type, injections);
     }
 
     public void LoadServices(Assembly assembly)
@@ -78,16 +77,15 @@ public sealed class Vault : IDisposable
     }
 
     [Pure]
-    private static List<InjectionInfo[]> FindInjections(Assembly assembly)
+    private static List<(Type type, InjectionInfo[] injections)> FindInjections(Assembly assembly)
     {
         var types = assembly.GetTypes();
         const BindingFlags anyFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-        List<InjectionInfo[]> list = [];
+        List<(Type, InjectionInfo[])> list = [];
+        List<InjectionInfo> typeList = [];
 
         for (int i = 0; i < types.Length; i++)
         {
-            List<InjectionInfo> typeList = [];
-
             foreach (FieldInfo field in types[i].GetFields(anyFlags))
                 if (field.TryGetCustomAttribute(out InjectAttribute? attr))
                 {
@@ -104,7 +102,8 @@ public sealed class Vault : IDisposable
                     typeList.Add(new InjectionInfo(property.PropertyType, resolver, isOptional));
                 }
 
-            list.Add(typeList.ToArray());
+            list.Add((types[i], typeList.ToArray()));
+            typeList.Clear();
         }
         return list;
     }

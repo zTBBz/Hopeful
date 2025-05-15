@@ -11,5 +11,4 @@ public sealed class InjectAttribute : Attribute
 
     public InjectAttribute() { }
     public InjectAttribute(object key) => Key = key;
-
 }
