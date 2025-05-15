@@ -19,7 +19,7 @@ public static class StreamExtensions
     [MustUseReturnValue]
     public static byte[] ToByteArray(this Stream stream)
     {
-        Guard.ThrowIfNull(stream);
+        ArgumentNullException.ThrowIfNull(stream, nameof(stream));
 
         if (stream.TryGetLength(out int byteLength))
         {
@@ -43,7 +43,7 @@ public static class StreamExtensions
     [MustUseReturnValue]
     public static byte[] ToByteArrayDangerous(this Stream stream)
     {
-        Guard.ThrowIfNull(stream);
+        ArgumentNullException.ThrowIfNull(stream, nameof(stream));
 
         // If the stream is an exposed MemoryStream, try to use its buffer directly without copying
         if (stream is MemoryStream memory && memory.TryGetBuffer(out ArraySegment<byte> segment))
@@ -66,7 +66,7 @@ public static class StreamExtensions
     [Pure]
     public static bool TryGetLength(this Stream stream, out int byteLength)
     {
-        Guard.ThrowIfNull(stream);
+        ArgumentNullException.ThrowIfNull(stream, nameof(stream));
 
         try
         {
@@ -79,5 +79,4 @@ public static class StreamExtensions
             return false;
         }
     }
-
 }
