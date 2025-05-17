@@ -1,6 +1,6 @@
 ﻿namespace Hopeful.Asset;
 
-internal enum AssetFormat
+public enum AssetFormat
 {
     Sprite,
     Audio,

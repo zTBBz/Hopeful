@@ -1,5 +1,4 @@
-﻿using Hopeful.Injection;
-using System;
+﻿using System;
 using System.Threading.Tasks;
 
 namespace Hopeful.Asset.Loaders;

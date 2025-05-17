@@ -1,6 +1,5 @@
-﻿using Hopeful.Injection;
+﻿using Hopeful.Utilities;
 using Microsoft.Xna.Framework.Graphics;
-using System.ComponentModel.Composition;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -9,8 +8,7 @@ namespace Hopeful.Asset.Loaders;
 [Service(AssetFormat.Shader)]
 public class ShaderLoader : IAssetLoader
 {
-    [Import]
-    private static GlobalGraphics _graphics = null!;
+    private readonly GlobalGraphics _graphics = GameCore.RootVault.InjectService<GlobalGraphics>();
 
     public Task<object> Load(string path)
     {

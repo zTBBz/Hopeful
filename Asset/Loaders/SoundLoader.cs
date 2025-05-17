@@ -1,5 +1,4 @@
-﻿using Hopeful.Injection;
-using Microsoft.Xna.Framework.Audio;
+﻿using Microsoft.Xna.Framework.Audio;
 using System.Threading.Tasks;
 
 namespace Hopeful.Asset.Loaders;

@@ -1,5 +1,4 @@
-﻿using Hopeful.Injection;
-using Hopeful.Utilities;
+﻿using Hopeful.Utilities;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -18,8 +17,7 @@ public interface ITextureAtlasFactory
 [Service]
 public class TextureAtlasFactory : ITextureAtlasFactory
 {
-    [Inject]
-    private readonly GlobalGraphics _graphics = null!;
+    private readonly GlobalGraphics _graphics = GameCore.RootVault.InjectService<GlobalGraphics>();
 
     public List<Texture2DAtlas> PackTextures(List<(string name, Texture2D texture)> textures, int maxAtlasSize)
     {

@@ -1,9 +1,5 @@
-﻿using FontStashSharp;
-using Hopeful.Asset.Loaders;
-using Hopeful.Injection;
+﻿using Hopeful.Asset.Loaders;
 using Hopeful.Utilities;
-using Microsoft.Xna.Framework.Audio;
-using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Concurrent;
 using System.IO;
@@ -12,7 +8,7 @@ using System.Threading.Tasks;
 namespace Hopeful.Asset;
 
 [Service]
-public sealed class AssetManager
+public sealed class AssetManager : IDisposable
 {
     private readonly ConcurrentDictionary<string, object> _assetsCache = new();
 
@@ -20,7 +16,7 @@ public sealed class AssetManager
 
     public bool IsDisposed { get; private set; }
 
-    internal async Task LoadAllAssetsAsync(string assetsDirectory)
+    public async Task LoadAllAssetsAsync(string assetsDirectory)
     {
         var assets = Directory.EnumerateFiles(PathHelper.GetAssetAbsolutePath(assetsDirectory));
 
@@ -30,8 +26,6 @@ public sealed class AssetManager
             await LoadAssetAsync(assetPath).ConfigureAwait(false);
         });
 
-        /*foreach (var asset in assets)
-            await LoadAssetAsync(asset).ConfigureAwait(false);*/
         OnAssetsLoaded?.Invoke();
     }
 
@@ -45,7 +39,9 @@ public sealed class AssetManager
     public bool TryGetAsset<T>(string assetId, out T? asset) where T : class
     {
         asset = null;
-        if (_assetsCache.TryGetValue(assetId + GetAssetSuffix<T>(), out var raw))
+        if (IsDisposed) return false;
+
+        if (_assetsCache.TryGetValue(assetId + AssetDetector.GetAssetSuffix<T>(), out var raw))
             asset = (T)raw;
         return asset != null;
     }
@@ -76,53 +72,14 @@ public sealed class AssetManager
 
     private static async Task<object> LoadRaw(string assetPath)
     {
-        object? raw = null;
-        var format = DetectFormat(assetPath);
+        var format = AssetDetector.DetectFormat(assetPath);
         var loader = GameCore.RootVault.InjectService<IAssetLoader>(format);
-        raw = await loader.Load(assetPath);
+        object? raw = await loader.Load(assetPath);
 
         return raw ?? throw new AssetLoadException(assetPath, "invalid file format.");
     }
 
-    #region Format detecting
-    private static AssetFormat DetectFormat(string assetPath)
-    {
-        var extension = Path.GetExtension(assetPath);
-        switch (extension)
-        {
-            case ".png" or ".dds" or ".jpeg" or ".jpg":
-                return AssetFormat.Sprite;
-            case ".mp3" or ".ogg":
-                return AssetFormat.Audio;
-            case ".loc":
-                return AssetFormat.Localization;
-            case ".ttf":
-                return AssetFormat.Font;
-            default:
-                throw new AssetLoadException(assetPath, "invalid file format.");
-        }
-    }
-
-    private static string GetAssetSuffix<T>() where T : class
-    {
-        var type = nameof(T);
-        switch (type)
-        {
-            case nameof(Texture2D):
-                return AssetFormat.Sprite.ToString();
-            case nameof(SoundEffect):
-                return AssetFormat.Audio.ToString();
-            case nameof(SpriteEffect):
-                return AssetFormat.Shader.ToString();
-            case nameof(FontSystem):
-                return AssetFormat.Font.ToString();
-            default:
-                return string.Empty;
-        }
-    }
-    #endregion
-
-    internal void Dispose()
+    public void Dispose()
     {
         if (IsDisposed) return;
         IsDisposed = true;

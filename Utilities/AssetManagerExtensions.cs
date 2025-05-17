@@ -2,13 +2,12 @@
 using Hopeful.Asset;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using System.ComponentModel.Composition;
 
 namespace Hopeful.Utilities;
 
 public static class AssetManagerExtensions
 {
-    [Import]
+    [Inject]
     private static readonly GlobalGraphics _graphics = null!;
 
     /// <summary>
