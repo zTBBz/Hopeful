@@ -14,7 +14,7 @@ public sealed class Vault : IDisposable
     public Vault? Parent => _parent;
 
     public Vault() { }
-
+    
     public Vault(Vault parent)
     {
         _parent = parent;
@@ -22,7 +22,8 @@ public sealed class Vault : IDisposable
     }
 
     private readonly Dictionary<Type, InjectionInfo[]> _injections = []; // <ClientType, ClientTypeInjections[]>
-    private readonly Dictionary<(object?, Type), object> _services = []; // <(ServiceKey, ServiceType), ServiceInstance>
+    private readonly Dictionary<(object? serviceKey, Type serviceType), object> _services = []; // <(ServiceKey, ServiceType (can be interface)), ServiceInstance>
+    private readonly Dictionary<(object? serviceKey, Type serviceType), List<Func<object, object>>> _decorators = []; // Func<OriginalService, DecoratorService>
 
     public T CreateWithInjection<T>() where T : class, new()
     {
@@ -37,21 +38,22 @@ public sealed class Vault : IDisposable
         {
             foreach (var injection in injections)
             {
-                object? injectInstance = Resolve(injection.TypeToken, injection.IsOptional);
+                object? injectInstance = Resolve(injection);
                 injection.Resolver.Resolve(injection, client, injectInstance);
             }
         }
     }
 
-    private object? Resolve(Type type, bool isOptional)
+    private object? Resolve(InjectionInfo info)
     {
         object? injection = null;
+        var type = info.TypeToken;
 
-        if (type.TryGetCustomAttribute<ServiceAttribute>(out var service)) // services supports interfaces. Need example go to AssetManager line 81.
-            return InjectService(type, service.Key);
+        if (type.TryGetCustomAttribute<ServiceAttribute>(out var service))
+            return InjectService(type, service.Key, info.DecoratorTargetType);
 
         // If the injection is required, attempt to create it
-        if (!isOptional)
+        if (!info.IsOptional)
         {
             if (type.IsInterface || type.IsAbstract) throw new InvalidOperationException();
             injection = Activator.CreateInstance(type);
@@ -76,12 +78,19 @@ public sealed class Vault : IDisposable
             ExtractService(service.Type, service.Type, service.Key);
     }
 
+    public void LoadDecorators(Assembly assembly)
+    {
+        var decorators = FindDecorators(assembly);
+        foreach (var (ServiceType, DecoratorType, Key) in decorators)
+            ExtractDecorator(ServiceType, inner => Activator.CreateInstance(DecoratorType, [inner])!, Key);
+    }
+
     [Pure]
     private static List<(Type type, InjectionInfo[] injections)> FindInjections(Assembly assembly)
     {
         var types = assembly.GetTypes();
         const BindingFlags anyFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-        List<(Type, InjectionInfo[])> list = [];
+        List<(Type type, InjectionInfo[] injections)> list = [];
         List<InjectionInfo> typeList = [];
 
         for (int i = 0; i < types.Length; i++)
@@ -91,7 +100,7 @@ public sealed class Vault : IDisposable
                 {
                     IInjectionResolver resolver = new FieldInjectionResolver(field);
                     bool isOptional = attr.Optional ?? field.GetNullability() == Nullability.Nullable;
-                    typeList.Add(new InjectionInfo(field.FieldType, resolver, isOptional));
+                    typeList.Add(new InjectionInfo(field.FieldType, resolver, isOptional, attr.DecoratorTargetType));
                 }
 
             foreach (PropertyInfo property in types[i].GetProperties(anyFlags))
@@ -99,7 +108,7 @@ public sealed class Vault : IDisposable
                 {
                     IInjectionResolver resolver = new PropertyInjectionResolver(property);
                     bool isOptional = attr.Optional ?? property.GetNullability() == Nullability.Nullable;
-                    typeList.Add(new InjectionInfo(property.PropertyType, resolver, isOptional));
+                    typeList.Add(new InjectionInfo(property.PropertyType, resolver, isOptional, attr.DecoratorTargetType));
                 }
 
             list.Add((types[i], typeList.ToArray()));
@@ -119,10 +128,43 @@ public sealed class Vault : IDisposable
     }
 
     [Pure]
-    public object InjectService(Type type, object? key = null)
+    private static List<(Type ServiceType, Type DecoratorType, object? Key)> FindDecorators(Assembly assembly)
+    {
+        var types = assembly.GetTypes();
+        List<(Type ServiceType, Type DecoratorType, object? Key)> list = [];
+
+        foreach (var type in types)
+        {
+            var baseType = type.BaseType;
+            if (baseType?.IsGenericType == true && baseType.GetGenericTypeDefinition() == typeof(Decorator<>))
+            {
+                var serviceType = baseType.GetGenericArguments()[0];
+                list.Add((serviceType, type, null));
+                continue;
+            }
+
+            var attr = type.GetCustomAttribute<DecoratorAttribute>();
+            if (attr != null)
+                list.Add((attr.Type, type, attr.Key));
+        }
+        return list;
+    }
+
+    [Pure]
+    public object InjectService(Type type, object? key = null, Type? decoratorTargetType = null) // targetType only for decorators chain, support base class and interfaces
     {
         if (_services.TryGetValue((key, type), out var service))
+        {
+            if (_decorators.TryGetValue((key, type), out var decorator))
+                foreach (var decorate in decorator)
+                {
+                    service = decorate(service);
+                    if (decoratorTargetType != null && decoratorTargetType.IsAssignableFrom(service.GetType())) break;
+                }
+
             return service;
+        }
+
         throw new InvalidOperationException($"Service Type {type} is not exist.");
     }
 
@@ -134,45 +176,30 @@ public sealed class Vault : IDisposable
     public void ExtractService(Type type, object instance, object? key = null)
     {
         var instanceType = instance.GetType();
-        if (instanceType != type) throw new InvalidOperationException($"Instance Type {instanceType} not equal Service Type {type}.");
+        if (!type.IsAssignableFrom(instanceType)) throw new InvalidOperationException($"Instance Type {instanceType} not equal Service Type {type}.");
         _services.TryAdd((key, type), instance);
     }
 
     [Pure]
-    public IEnumerable<KeyValuePair<Type, InjectionInfo[]>> EnumerateInjections()
+    public void ExtractDecorator(Type serviceType, Func<object, object> decoratorFabric, object? serviceKey = null)
     {
-        var current = this;
-        var seen = new HashSet<Type>();
-
-        while (current != null)
-        {
-            foreach (var kvp in current._injections)
-            {
-                if (seen.Add(kvp.Key)) // избегаем перекрытий
-                    yield return kvp;
-            }
-
-            current = current._parent;
-        }
+        var k = (serviceKey, serviceType);
+        if (!_decorators.TryGetValue(k, out var list))
+            _decorators[k] = list = [];
+        list.Add(decoratorFabric);
     }
 
     [Pure]
+    public IEnumerable<KeyValuePair<Type, InjectionInfo[]>> EnumerateInjections()
+        => _injections.AsEnumerable();
+
+    [Pure]
     public IEnumerable<KeyValuePair<(object?, Type), object>> EnumerateServices()
-    {
-        var current = this;
-        var seen = new HashSet<(object?, Type)>();
+        => _services.AsEnumerable();
 
-        while (current != null)
-        {
-            foreach (var kvp in current._services)
-            {
-                if (seen.Add(kvp.Key))
-                    yield return kvp;
-            }
-
-            current = current._parent;
-        }
-    }
+    [Pure]
+    public IEnumerable<KeyValuePair<(object?, Type), List<Func<object, object>>>> EnumerateDecorators()
+        => _decorators.AsEnumerable();
 
     public void Dispose()
     {
