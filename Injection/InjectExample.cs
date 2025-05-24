@@ -6,10 +6,10 @@ namespace Hopeful.Injection;
 public class InjectExample
 {
     [Inject("Old")]
-    public GlobalGraphics GraphicsOld = null!; // is GlobalGraphics
+    public GlobalGraphics GraphicsOld = null!; // is GlobalGraphics with key Old
 
     [Inject(AssetFormat.Sprite)]
-    public IAssetLoader Loader = null!; // is TextureLoader
+    public IAssetLoader Loader = null!; // is TextureLoader (Sprite)
 
     [Inject]
     public GlobalGraphics Graphics = null!; // is just GlobalGraphics
