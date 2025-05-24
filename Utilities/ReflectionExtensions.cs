@@ -159,7 +159,7 @@ public static class ReflectionExtensions
             case byte b:
                 return (Nullability)b;
             case ReadOnlyCollection<CustomAttributeTypedArgument> args
-                when !args.IsEmpty() && args[0].Value is byte b:
+                when args.IsNotEmpty() && args[0].Value is byte b:
                 return (Nullability)b;
             default:
                 return Nullability.Unknown;

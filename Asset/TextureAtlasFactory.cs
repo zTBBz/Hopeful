@@ -51,7 +51,7 @@ public class TextureAtlasFactory : ITextureAtlasFactory
             currentRowHeight = Math.Max(currentRowHeight, texture.Height);
         }
 
-        if (!currentAtlasData.IsEmpty())
+        if (currentAtlasData.IsNotEmpty())
         {
             var atlas = CreateAtlas(currentAtlasData, maxAtlasSize);
             atlases.Add(atlas);
