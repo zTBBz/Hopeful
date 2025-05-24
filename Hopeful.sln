@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hopeful", "Hopeful.csproj",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TinyMessenger", "..\TinyMessenger\TinyMessenger\TinyMessenger.csproj", "{DE0CA005-3B06-4751-9429-9671E7916492}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hopeful.Tests", "..\Hopeful.Tests\Hopeful.Tests.csproj", "{40F0D3AB-024D-46A3-B0E5-8D9647985C3C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{DE0CA005-3B06-4751-9429-9671E7916492}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DE0CA005-3B06-4751-9429-9671E7916492}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DE0CA005-3B06-4751-9429-9671E7916492}.Release|Any CPU.Build.0 = Release|Any CPU
+		{40F0D3AB-024D-46A3-B0E5-8D9647985C3C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{40F0D3AB-024D-46A3-B0E5-8D9647985C3C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{40F0D3AB-024D-46A3-B0E5-8D9647985C3C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{40F0D3AB-024D-46A3-B0E5-8D9647985C3C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
