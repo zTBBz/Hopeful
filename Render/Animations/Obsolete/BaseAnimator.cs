@@ -1,5 +1,4 @@
 ﻿using System;
-using System.ComponentModel.Composition;
 using Friflo.Engine.ECS.Systems;
 using Friflo.Engine.ECS;
 using Hopeful.Asset;
@@ -7,7 +6,7 @@ using Hopeful.Utilities;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Hopeful.Render.Animations;
+namespace Hopeful.Render.Animations.Obsolete;
 
 /*
 public interface IAnimator : IDisposable

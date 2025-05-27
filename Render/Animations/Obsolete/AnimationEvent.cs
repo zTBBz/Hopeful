@@ -4,7 +4,7 @@
 
 using System;
 
-namespace Hopeful.Render.Animations;
+namespace Hopeful.Render.Animations.Obsolete;
 /*
 /// <summary>
 /// Represents an event that occurs during an animation.
