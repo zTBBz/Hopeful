@@ -1,5 +1,4 @@
 ﻿using Hopeful.Asset;
-using Hopeful.Injection;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -35,7 +34,7 @@ public class GlobalGraphics : IDisposable
     public void Dispose()
     {
         Pixel.Dispose();
-        // Texutre2DAtlas disposing by AssetManager
+        // Texture2DAtlas disposing by AssetManager
     }
 
     public event Action? OnWindowSizeChanged;

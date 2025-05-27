@@ -14,7 +14,7 @@ public interface ITextureAtlasFactory
     List<Texture2DAtlas> PackTextures(List<(string name, Texture2D texture)> textures, int maxAtlasSize);
 }
 
-[Service]
+[Service(typeof(ITextureAtlasFactory))]
 public class TextureAtlasFactory : ITextureAtlasFactory
 {
     private readonly GlobalGraphics _graphics = GameCore.RootVault.InjectService<GlobalGraphics>();

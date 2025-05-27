@@ -5,6 +5,7 @@ using System.IO;
 
 namespace Hopeful.Asset;
 
+// TODO: Make as DI Service
 public static class AssetDetector
 {
     public static AssetFormat DetectFormat(string assetPath)

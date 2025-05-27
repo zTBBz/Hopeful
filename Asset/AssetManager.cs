@@ -7,14 +7,16 @@ using System.Threading.Tasks;
 
 namespace Hopeful.Asset;
 
-[Service]
-public sealed class AssetManager : IDisposable
+[Service(typeof(IAssetManager))]
+public sealed class AssetManager(Vault vault) : IAssetManager, IDisposable
 {
     private readonly ConcurrentDictionary<string, object> _assetsCache = new();
+    private readonly Vault _vault = vault;
+
+    private bool _isDisposed;
+    public bool IsDisposed => _isDisposed;
 
     public event Action? OnAssetsLoaded;
-
-    public bool IsDisposed { get; private set; }
 
     public async Task LoadAllAssetsAsync(string assetsDirectory)
     {
@@ -46,7 +48,7 @@ public sealed class AssetManager : IDisposable
         return asset != null;
     }
 
-    private async Task LoadAssetAsync(string assetPath)
+    public async Task LoadAssetAsync(string assetPath)
     {
         ArgumentException.ThrowIfNullOrEmpty(assetPath, nameof(assetPath));
         PathHelper.ValidatePath(assetPath);
@@ -63,17 +65,10 @@ public sealed class AssetManager : IDisposable
         }
     }
 
-    private void UnloadAsset(string assetId)
-    {
-        if (_assetsCache.TryRemove(assetId, out var obj))
-            if (obj is IDisposable disposable)
-                disposable.Dispose();
-    }
-
-    private static async Task<object> LoadRaw(string assetPath)
+    private async Task<object> LoadRaw(string assetPath)
     {
         var format = AssetDetector.DetectFormat(assetPath);
-        var loader = GameCore.RootVault.InjectService<IAssetLoader>(format);
+        var loader = _vault.InjectService<IAssetLoader>(format);
         object? raw = await loader.Load(assetPath);
 
         return raw ?? throw new AssetLoadException(assetPath, "invalid file format.");
@@ -81,8 +76,8 @@ public sealed class AssetManager : IDisposable
 
     public void Dispose()
     {
-        if (IsDisposed) return;
-        IsDisposed = true;
+        if (_isDisposed) return;
+        _isDisposed = true;
 
         foreach (var obj in _assetsCache.Values)
             if (obj is IDisposable disposable)
