@@ -12,7 +12,7 @@ namespace Hopeful.Injection;
 public sealed class DecoratorAttribute : Attribute
 {
     /// <summary>
-    /// Gets the optional key for the decorated service.
+    /// Gets the optional key for the service to decorate.
     /// </summary>
     public object? Key { get; }
 

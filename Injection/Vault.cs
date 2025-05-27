@@ -97,7 +97,7 @@ public sealed class Vault : IDisposable
     {
         var services = FindServices(assembly);
         foreach (var service in services)
-            ExtractService(service.Type, service.Type, service.Key);
+            ExtractService(service.Type, service.ServiceType ?? service.Type, service.Key);
     }
 
     /// <summary>
@@ -158,13 +158,13 @@ public sealed class Vault : IDisposable
     }
 
     [Pure]
-    private static IEnumerable<(object? Key, Type Type)> FindServices(Assembly assembly)
+    private static IEnumerable<(object? Key, Type Type, Type? ServiceType)> FindServices(Assembly assembly)
     {
         return assembly.GetTypes()
             .Where(t => t.IsClass && !t.IsAbstract)
             .Select(t => (Type: t, Attr: t.GetCustomAttribute<ServiceAttribute>()))
             .Where(x => x.Attr != null)
-            .Select(x => (x.Attr!.Key, x.Type));
+            .Select(x => (x.Attr!.Key, x.Type, x.Attr.ServiceType));
     }
 
     [Pure]
