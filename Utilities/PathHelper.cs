@@ -4,18 +4,18 @@ using System.Security;
 
 namespace Hopeful.Utilities;
 
+/// <summary>
+///   <para>Provides a set of utility methods for working with paths.</para>
+/// </summary>
 public static class PathHelper
 {
     private static string? _gameDirectory;
 
-    internal static string GameDirectory
+    public static string GameDirectory
     {
         get
         {
-            if (_gameDirectory == null)
-            {
-                _gameDirectory = AppContext.BaseDirectory;
-            }
+            _gameDirectory ??= AppContext.BaseDirectory;
             return _gameDirectory;
         }
     }
@@ -71,13 +71,11 @@ public static class PathHelper
         try
         {
             string absolutePath = Path.GetFullPath(
-                path.StartsWith(GameDirectory)
-                    ? path
-                    : GetAbsolutePath(path)
+                path.StartsWith(GameDirectory) ? path : GetAbsolutePath(path)
             );
 
             return absolutePath.StartsWith(GameDirectory, StringComparison.OrdinalIgnoreCase)
-                   && !Path.GetFileName(absolutePath).StartsWith(".")
+                   && !Path.GetFileName(absolutePath).StartsWith('.')
                    && !absolutePath.Contains("..");
         }
         catch (Exception ex) when (
@@ -105,9 +103,6 @@ public static class PathHelper
     public static void ValidatePath(string path)
     {
         if (!IsPathSafe(path))
-        {
-            throw new SecurityException(
-                $"Attempted to access file outside game directory: {path}");
-        }
+            throw new SecurityException($"Attempted to access file outside game directory: {path}");
     }
 }

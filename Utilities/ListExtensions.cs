@@ -3,6 +3,9 @@ using System.Collections.Generic;
 
 namespace Hopeful.Utilities;
 
+/// <summary>
+///   <para>Provides a set of extension methods for the <see cref="List{T}"/> class.</para>
+/// </summary>
 public static class ListExtensions
 {
     /// <summary>

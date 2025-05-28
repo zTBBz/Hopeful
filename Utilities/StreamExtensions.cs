@@ -33,6 +33,7 @@ public static class StreamExtensions
         stream.CopyTo(temp);
         return temp.ToArray();
     }
+
     /// <summary>
     ///   <para>Retrieves a byte array containing the specified <paramref name="stream"/>'s content. May return an exposed <see cref="MemoryStream"/>'s buffer, avoiding an allocation.</para>
     /// </summary>

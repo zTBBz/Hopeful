@@ -5,6 +5,9 @@ using System.Runtime.InteropServices;
 
 namespace Hopeful.Utilities;
 
+/// <summary>
+///   <para>Provides a set of extension methods for the <see cref="Texture2D"/> class.</para>
+/// </summary>
 public static class TextureExtensions
 {
     public static Texture2D WithData<T>(this Texture2D texture, T[] data) where T : struct

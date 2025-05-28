@@ -3,6 +3,9 @@ using System.Numerics;
 
 namespace Hopeful.Utilities;
 
+/// <summary>
+///   <para>Provides a set of extension methods for the <see cref="Matrix3x2"/> class.</para>
+/// </summary>
 public static class TransformHelper
 {
     public static Matrix3x2 Rotate(float rotation)

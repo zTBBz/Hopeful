@@ -3,6 +3,9 @@ using Microsoft.Xna.Framework;
 
 namespace Hopeful.Utilities;
 
+/// <summary>
+///   <para>Provides a set of extension methods for the <see cref="GameTime"/> class.</para>
+/// </summary>
 public static class GameTimeExtensions
 {
     public static UpdateTick ToUpdateTick(this GameTime time)

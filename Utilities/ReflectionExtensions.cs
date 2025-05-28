@@ -23,6 +23,7 @@ public static class ReflectionExtensions
     [Pure]
     public static bool TryGetCustomAttribute<T>(this Assembly element, [NotNullWhen(true)] out T? attribute) where T : Attribute
         => TryGetCustomAttributeCore((T[])element.GetCustomAttributes<T>(), out attribute);
+
     /// <summary>
     ///   <para>Retrieves a custom attribute of the specified type that is applied to the specified module, and returns a value indicating whether such an attribute is found.</para>
     /// </summary>
@@ -34,6 +35,7 @@ public static class ReflectionExtensions
     [Pure]
     public static bool TryGetCustomAttribute<T>(this Module element, [NotNullWhen(true)] out T? attribute) where T : Attribute
         => TryGetCustomAttributeCore((T[])element.GetCustomAttributes<T>(), out attribute);
+
     /// <summary>
     ///   <para>Retrieves a custom attribute of the specified type that is applied to the specified member, and returns a value indicating whether such an attribute is found.</para>
     /// </summary>
@@ -45,6 +47,7 @@ public static class ReflectionExtensions
     [Pure]
     public static bool TryGetCustomAttribute<T>(this MemberInfo element, [NotNullWhen(true)] out T? attribute) where T : Attribute
         => TryGetCustomAttributeCore((T[])element.GetCustomAttributes<T>(), out attribute);
+
     /// <summary>
     ///   <para>Retrieves a custom attribute of the specified type that is applied to the specified parameter, and returns a value indicating whether such an attribute is found.</para>
     /// </summary>
@@ -81,6 +84,7 @@ public static class ReflectionExtensions
         ArgumentNullException.ThrowIfNull(field, nameof(field));
         return GetNullabilityCore(field.FieldType, field.DeclaringType, field.GetCustomAttributesData());
     }
+
     /// <summary>
     ///   <para>Returns the nullability of the specified <paramref name="property"/>.</para>
     /// </summary>
@@ -93,6 +97,7 @@ public static class ReflectionExtensions
         ArgumentNullException.ThrowIfNull(property, nameof(property));
         return GetNullabilityCore(property.PropertyType, property.DeclaringType, property.GetCustomAttributesData());
     }
+
     /// <summary>
     ///   <para>Returns the nullability of the specified <paramref name="parameter"/>.</para>
     /// </summary>
@@ -154,18 +159,14 @@ public static class ReflectionExtensions
     [Pure]
     private static Nullability ParseNullableState(object? state)
     {
-        switch (state)
+        return state switch
         {
-            case byte b:
-                return (Nullability)b;
-            case ReadOnlyCollection<CustomAttributeTypedArgument> args
-                when args.IsNotEmpty() && args[0].Value is byte b:
-                return (Nullability)b;
-            default:
-                return Nullability.Unknown;
-        }
+            byte b => (Nullability)b,
+            ReadOnlyCollection<CustomAttributeTypedArgument> args
+                            when args.IsNotEmpty() && args[0].Value is byte b => (Nullability)b,
+            _ => Nullability.Unknown,
+        };
     }
-
 }
 
 /// <summary>
@@ -177,10 +178,12 @@ public enum Nullability
     ///   <para>Specifies that the value's nullability is unknown.</para>
     /// </summary>
     Unknown = 0,
+
     /// <summary>
     ///   <para>Specifies that the value is not null.</para>
     /// </summary>
     NotNull = 1,
+
     /// <summary>
     ///   <para>Specifies that the value may be null.</para>
     /// </summary>

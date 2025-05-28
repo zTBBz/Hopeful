@@ -3,6 +3,9 @@ using System;
 
 namespace Hopeful.Utilities;
 
+/// <summary>
+///   <para>Provides a set of generic extension methods for the <see cref="Vault"/> class.</para>
+/// </summary>
 public static class VaultExtensions
 {
     /// <summary>

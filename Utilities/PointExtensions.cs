@@ -6,7 +6,10 @@ namespace Hopeful.Utilities;
 
 public static class PointExtensions
 {
-    public static bool IsPointOverRectangle(this Vector2 point, Rectangle rectangle)
+    public static bool IsVectorOverRectangle(this Vector2 vector, Rectangle rectangle)
+        => rectangle.Contains(vector);
+
+    public static bool IsPointOverRectangle(this Point point, Rectangle rectangle)
         => rectangle.Contains(point);
 
     public static Vector2 ToVector2(this Point point)
