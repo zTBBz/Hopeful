@@ -1,6 +1,5 @@
 ﻿using Hopeful.Injection.Resolvers;
 using Hopeful.Utilities;
-using JetBrains.Annotations;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,54 +9,33 @@ namespace Hopeful.Injection;
 
 public sealed class Vault : IDisposable
 {
-    /// <summary>
-    /// Gets the parent vault, if any.
-    /// </summary>
     public Vault? Parent => _parent;
     private readonly Vault? _parent;
 
     public Vault() { }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Vault"/> class with a parent vault.
-    /// </summary>
-    /// <param name="parent">The parent vault to inherit services from.</param>
     public Vault(Vault parent)
     {
         _parent = parent;
-        _services = EnumerateServices().ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+        _services = Services.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
     }
 
     private readonly Dictionary<Type, InjectionInfo[]> _injections = []; // <ClientType, ClientTypeInjections[]>
     private readonly Dictionary<(object? serviceKey, Type serviceType), object> _services = []; // <(ServiceKey, ServiceType (can be interface)), ServiceInstance>
     private readonly Dictionary<(object? serviceKey, Type serviceType), List<Func<object, object>>> _decorators = []; // Func<OriginalService, DecoratorService>
 
-    /// <summary>
-    /// Creates a new instance of <typeparamref name="T"/> and injects dependencies into it.
-    /// </summary>
-    /// <typeparam name="T">The type to instantiate and inject.</typeparam>
-    /// <returns>The created and injected instance.</returns>
-    public T CreateWithInjection<T>() where T : class, new()
+    public T CreateWithInjection<T>() where T : new()
     {
         var instance = new T();
         Inject(instance);
         return instance;
     }
 
-    /// <summary>
-    /// Injects dependencies into the specified client instance.
-    /// </summary>
-    /// <param name="clientInstance">The object to inject dependencies into.</param>
-    public void Inject(object clientInstance)
+    public object Inject(object clientInstance)
     {
         if (_injections.TryGetValue(clientInstance.GetType(), out var injections))
-        {
             foreach (var injection in injections)
-            {
-                object? injectInstance = Resolve(injection);
-                injection.Resolver.Resolve(injection, clientInstance, injectInstance);
-            }
-        }
+                injection.Resolver.Resolve(injection, clientInstance, Resolve(injection));
+        return clientInstance;
     }
 
     private object? Resolve(InjectionInfo info)
@@ -66,7 +44,7 @@ public sealed class Vault : IDisposable
         var type = info.TypeToken;
 
         if (type.TryGetCustomAttribute<ServiceAttribute>(out var service))
-            return InjectService(type, service.Key, info.DecoratorTargetType);
+            return info.DecoratorTargetType != null ? InjectService(type, info.DecoratorTargetType, service.Key) : InjectService(type, service.Key);
 
         // If the injection is required, attempt to create it
         if (!info.IsOptional)
@@ -78,10 +56,6 @@ public sealed class Vault : IDisposable
         return injection;
     }
 
-    /// <summary>
-    /// Loads all injectable fields and properties from the specified assembly.
-    /// </summary>
-    /// <param name="assembly">The assembly to scan for injectable members.</param>
     public void LoadInjections(Assembly assembly)
     {
         var entry = FindInjections(assembly);
@@ -89,45 +63,65 @@ public sealed class Vault : IDisposable
             _injections.Add(type, injections);
     }
 
-    /// <summary>
-    /// Loads all services marked with <see cref="ServiceAttribute"/> from the specified assembly.
-    /// </summary>
-    /// <param name="assembly">The assembly to scan for services.</param>
     public void LoadServices(Assembly assembly)
     {
         var services = FindServices(assembly);
+        var graph = new Graph<Type>();
+        Type? fist = null;
+
         foreach (var service in services)
-            ExtractService(service.Type, service.ServiceType ?? service.Type, service.Key);
+        {
+            var type = service.ServiceType ?? service.Type;
+            fist ??= type;
+
+            graph.AddVertex(type);
+
+            if (!_injections.TryGetValue(type, out var injections)) continue;
+            var innerServices = injections.Where(i => i.TypeToken.TryGetCustomAttribute<ServiceAttribute>(out _));
+            foreach (var inner in innerServices)
+            {
+                graph.AddVertex(inner.TypeToken);
+                graph.AddEdge(type, inner.TypeToken);
+            }
+        }
+
+        var sortedServices = graph.DfsSort(fist!);
+        const BindingFlags flag = BindingFlags.Public | BindingFlags.Instance;
+        foreach (var serviceType in sortedServices)
+        {
+            var serviceInfo = services.First(s => s.Type == serviceType);
+
+            var methodInfo = typeof(Vault).GetMethod(nameof(ExtractService), flag, null, [typeof(object), typeof(bool)], null)!.MakeGenericMethod(serviceInfo.Type, serviceInfo.ServiceType ?? serviceInfo.Type);
+            methodInfo.Invoke(this, [serviceInfo.Key, true]);
+            //ExtractService(serviceInfo.Type, serviceInfo.ServiceType ?? serviceInfo.Type, serviceInfo.Key, true);
+        }
+
+        // Inject
+        foreach (var serviceType in sortedServices)
+        {
+            var serviceInfo = services.First(s => s.Type == serviceType);
+            var instance = _services[(serviceInfo.Key, serviceInfo.ServiceType ?? serviceInfo.Type)];
+            Inject(instance);
+        }
     }
 
-    /// <summary>
-    /// Loads all decorators from the specified assembly.
-    /// </summary>
-    /// <remarks>
-    /// This method registers as decorators both:
-    /// <list type="bullet">
-    ///   <item>
-    ///     <description>Classes marked with <see cref="DecoratorAttribute"/>.</description>
-    ///   </item>
-    ///   <item>
-    ///     <description>Classes that inherit from <c>Decorator&lt;T&gt;</c> (generic base class).</description>
-    ///   </item>
-    /// </list>
-    /// </remarks>
-    /// <param name="assembly">The assembly to scan for decorators.</param>
     public void LoadDecorators(Assembly assembly)
     {
         var decorators = FindDecorators(assembly);
-        foreach (var (ServiceType, DecoratorType, Key) in decorators)
-            ExtractDecorator(ServiceType, inner => Activator.CreateInstance(DecoratorType, [inner])!, Key);
+        const BindingFlags flag = BindingFlags.Public | BindingFlags.Instance;
+        foreach (var (Key, DecoratorType, ServiceType) in decorators)
+        {
+            var methodInfo = typeof(Vault).GetMethod(nameof(ExtractDecorator), flag, null, [typeof(Func<object, object>), typeof(object)], null)!.MakeGenericMethod(ServiceType);
+            Func<object, object> factory = inner => Activator.CreateInstance(DecoratorType, [inner])!;
+            methodInfo.Invoke(this, [factory, Key]);
+        }
     }
 
-    [Pure]
-    private static List<(Type type, InjectionInfo[] injections)> FindInjections(Assembly assembly)
+    private static List<(Type Type, InjectionInfo[] Injections)> FindInjections(Assembly assembly)
     {
         var types = assembly.GetTypes();
         const BindingFlags anyFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-        List<(Type type, InjectionInfo[] injections)> list = [];
+        List<(Type Type, InjectionInfo[] Injections)> list = [];
         List<InjectionInfo> typeList = [];
 
         for (int i = 0; i < types.Length; i++)
@@ -137,7 +131,7 @@ public sealed class Vault : IDisposable
                 {
                     IInjectionResolver resolver = new FieldInjectionResolver(field);
                     bool isOptional = field.GetNullability() == Nullability.Nullable;
-                    typeList.Add(new InjectionInfo(field.FieldType, resolver, isOptional, attr.DecoratorTargetType));
+                    typeList.Add(new(field.FieldType, resolver, isOptional, attr.DecoratorTargetType));
                 }
 
             foreach (PropertyInfo property in types[i].GetProperties(anyFlags))
@@ -145,7 +139,7 @@ public sealed class Vault : IDisposable
                 {
                     IInjectionResolver resolver = new PropertyInjectionResolver(property);
                     bool isOptional = property.GetNullability() == Nullability.Nullable;
-                    typeList.Add(new InjectionInfo(property.PropertyType, resolver, isOptional, attr.DecoratorTargetType));
+                    typeList.Add(new(property.PropertyType, resolver, isOptional, attr.DecoratorTargetType));
                 }
 
             if (typeList.IsNotEmpty())
@@ -157,130 +151,87 @@ public sealed class Vault : IDisposable
         return list;
     }
 
-    [Pure]
     private static IEnumerable<(object? Key, Type Type, Type? ServiceType)> FindServices(Assembly assembly)
-    {
-        return assembly.GetTypes()
+        => assembly.GetTypes()
             .Where(t => t.IsClass && !t.IsAbstract)
             .Select(t => (Type: t, Attr: t.GetCustomAttribute<ServiceAttribute>()))
             .Where(x => x.Attr != null)
             .Select(x => (x.Attr!.Key, x.Type, x.Attr.ServiceType));
-    }
 
-    [Pure]
-    private static List<(Type ServiceType, Type DecoratorType, object? Key)> FindDecorators(Assembly assembly)
+    private static List<(object? Key, Type DecoratorType, Type ServiceType)> FindDecorators(Assembly assembly)
     {
         var types = assembly.GetTypes();
-        List<(Type ServiceType, Type DecoratorType, object? Key)> list = [];
+        List<(object? Key, Type ServiceType, Type DecoratorType)> list = [];
 
         foreach (var type in types)
         {
             var baseType = type.BaseType;
             if (baseType?.IsGenericType == true && baseType.GetGenericTypeDefinition() == typeof(Decorator<>))
             {
-                var serviceType = baseType.GetGenericArguments()[0];
-                list.Add((serviceType, type, null));
+                list.Add((null, baseType.GetGenericArguments()[0], type));
                 continue;
             }
 
-            var attr = type.GetCustomAttribute<DecoratorAttribute>();
-            if (attr != null)
-                list.Add((attr.Type, type, attr.Key));
+            if (type.TryGetCustomAttribute<DecoratorAttribute>(out var attr))
+                list.Add((attr.Key, attr.Type, type));
         }
         return list;
     }
 
-    /// <summary>
-    /// Resolves and returns a service instance by type and optional key, applying decorators if present.
-    /// </summary>
-    /// <param name="serviceType">The type of the service to resolve.</param>
-    /// <param name="key">The optional key for the service.</param>
-    /// <param name="decoratorTargetType">The type at which to stop applying decorators (optional).</param>
-    /// <returns>The resolved service instance.</returns>
-    /// <exception cref="InvalidOperationException">Thrown if the service is not registered.</exception>
-    [Pure]
-    public object InjectService(Type serviceType, object? key = null, Type? decoratorTargetType = null)
+    public TService InjectService<TService>(object? key = null)
+        => (TService)InjectService(typeof(TService), key);
+    
+    public object InjectService(Type serviceType, object? key = null)
+        => _services.TryGetValue((key, serviceType), out var service) ? service : throw new InvalidOperationException($"Service Type {serviceType} does not exist.");
+
+    public TService InjectService<TService, TDecorator>(object? key = null)
+        => (TService)InjectService(typeof(TService), typeof(TDecorator), key);
+    
+    public object InjectService(Type serviceType, Type decoratorType, object? key = null)
     {
-        if (_services.TryGetValue((key, serviceType), out var service))
-        {
-            if (_decorators.TryGetValue((key, serviceType), out var decorator))
-                foreach (var decorate in decorator)
-                {
-                    service = decorate(service);
-                    if (decoratorTargetType != null && decoratorTargetType.IsAssignableFrom(service.GetType())) break;
-                }
+        var service = InjectService(serviceType, key);
 
-            return service;
-        }
-
-        throw new InvalidOperationException($"Service Type {serviceType} does not exist.");
+        if (_decorators.TryGetValue((key, serviceType), out var decorator))
+            foreach (var decorate in decorator)
+            {
+                service = decorate(service);
+                if (decoratorType.IsAssignableFrom(service.GetType())) break;
+            }
+        return service;
     }
 
-    /// <summary>
-    /// Registers a service type and its implementation type in the vault.
-    /// </summary>
-    /// <param name="serviceType">The service interface or base type.</param>
-    /// <param name="serviceInstanceType">The concrete implementation type.</param>
-    /// <param name="key">The optional key for the service.</param>
-    public void ExtractService(Type serviceType, Type serviceInstanceType, object? key = null)
-        => _services.TryAdd((key, serviceType), Activator.CreateInstance(serviceInstanceType)!);
+    public void ExtractService<TService, TServiceInstance>(object? key = null, bool skipInjection = false)
+        => ExtractService<TService>(skipInjection ? Activator.CreateInstance<TServiceInstance>()! : Inject(Activator.CreateInstance<TServiceInstance>()!), key);
 
-    /// <summary>
-    /// Registers a service instance in the vault.
-    /// </summary>
-    /// <param name="serviceType">The service interface or base type.</param>
-    /// <param name="serviceInstance">The service instance.</param>
-    /// <param name="key">The optional key for the service.</param>
-    /// <exception cref="InvalidOperationException">Thrown if the instance type is not assignable to the service type, or if the service is already registered.</exception>
-    public void ExtractService(Type serviceType, object serviceInstance, object? key = null)
+    public void ExtractService<TService>(object serviceInstance, object? key = null) // maybe add check for serviceInstance nullabulity
     {
+        var serviceType = typeof(TService);
         var instanceType = serviceInstance.GetType();
         if (!serviceType.IsAssignableFrom(instanceType)) throw new InvalidOperationException($"Instance Type {instanceType} not assigned from Service Type {serviceType}.");
         if (!_services.TryAdd((key, serviceType), serviceInstance)) throw new InvalidOperationException($"Service Type {serviceType} with Key {key} already exist.");
     }
 
-    /// <summary>
-    /// Registers a decorator for a service type and optional key.
-    /// </summary>
-    /// <param name="serviceType">The service type to decorate.</param>
-    /// <param name="decoratorFactory">The factory function that creates the decorator.</param>
-    /// <param name="serviceKey">The optional key for the service.</param>
-    public void ExtractDecorator(Type serviceType, Func<object, object> decoratorFactory, object? serviceKey = null)
+    public void ExtractDecorator<TService>(Func<object, object> decoratorFactory, object? serviceKey = null)
     {
         ArgumentNullException.ThrowIfNull(decoratorFactory);
-        var k = (serviceKey, serviceType);
-        if (!_decorators.TryGetValue(k, out var list))
-            _decorators[k] = list = [];
+        var key = (serviceKey, typeof(TService));
+        _decorators.TryGetValue(key, out var list);
+        _decorators[key] = list ??= [];
         list.Add(decoratorFactory);
     }
 
-    /// <summary>
-    /// Enumerates all registered injections.
-    /// </summary>
-    /// <returns>An enumerable of client types and their injection info arrays.</returns>
-    [Pure]
-    public IEnumerable<KeyValuePair<Type, InjectionInfo[]>> EnumerateInjections()
-        => _injections.AsEnumerable();
+    public void ExtractDecorator<TService, TDecorator>(object? serviceKey = null)
+    {
+        var decorator = typeof(TDecorator);
+        var service = typeof(TService);
+        var ctor = decorator.GetConstructor([service]) ?? throw new InvalidOperationException($"Decorator Type {decorator} must have constructor accepting {service}");
+        ExtractDecorator<TService>(s => (TService)ctor.Invoke([s]), serviceKey);
+    }
 
-    /// <summary>
-    /// Enumerates all registered services.
-    /// </summary>
-    /// <returns>An enumerable of service keys/types and their instances.</returns>
-    [Pure]
-    public IEnumerable<KeyValuePair<(object?, Type), object>> EnumerateServices()
-        => _services.AsEnumerable();
+    public IEnumerable<KeyValuePair<Type, InjectionInfo[]>> Injections => _injections.AsEnumerable();
+    public IEnumerable<KeyValuePair<(object?, Type), object>> Services => _services.AsEnumerable();
+    public IEnumerable<KeyValuePair<(object?, Type), List<Func<object, object>>>> Decorators => _decorators.AsEnumerable();
 
-    /// <summary>
-    /// Enumerates all registered decorators.
-    /// </summary>
-    /// <returns>An enumerable of service keys/types and their decorator factory lists.</returns>
-    [Pure]
-    public IEnumerable<KeyValuePair<(object?, Type), List<Func<object, object>>>> EnumerateDecorators()
-        => _decorators.AsEnumerable();
-
-    /// <summary>
-    /// Disposes all registered services that implement <see cref="IDisposable"/> and clears all injections.
-    /// </summary>
     public void Dispose()
     {
         var toRemove = _services.Where(pair => pair.Value is IDisposable).ToArray();
