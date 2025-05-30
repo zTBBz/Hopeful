@@ -1,37 +1,14 @@
-using Hopeful.Injection;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 
 namespace Hopeful.Input;
 
-public interface IInputListener
-{
-    Vector2 PreviousMousePosition { get; }
-    Vector2 MousePosition { get; }
-    bool IsLeftMouseButtonPressed { get; }
-    bool IsLeftMouseButtonJustPressed { get; }
-    bool IsLeftMouseButtonJustReleased { get; }
-    bool IsRightMouseButtonPressed { get; }
-    bool IsRightMouseButtonJustPressed { get; }
-    bool IsRightMouseButtonJustReleased { get; }
-    int ScrollWheelValue { get; }
-    int ScrollWheelDelta { get; }
-    bool HasScrolled { get; }
-    bool IsActionPressed(GameAction action);
-    bool IsActionJustPressed(GameAction action);
-    bool IsActionJustReleased(GameAction action);
-    bool IsKeyPressed(Keys key);
-    bool IsKeyJustPressed(Keys key);
-    bool IsKeyJustReleased(Keys key);
-    bool IsKeyComboPressed(params Keys[] keys);
-    bool IsKeyComboLastPressed(params Keys[] keys);
-    bool IsModifierComboPressed(Keys mainKey, bool ctrl = false, bool shift = false, bool alt = false);
-    void Update();
-}
-
-[Service]
+[Service(typeof(IInputListener))]
 public class BaseInput : IInputListener
 {
+    [Inject]
+    private readonly KeyBindStore _store = null!;
+
     private MouseState _currentMouseState;
     private MouseState _previousMouseState;
     private KeyboardState _currentKeyboardState;
@@ -52,32 +29,38 @@ public class BaseInput : IInputListener
     public int ScrollWheelDelta => _currentMouseState.ScrollWheelValue - _previousMouseState.ScrollWheelValue;
     public bool HasScrolled => ScrollWheelDelta != 0;
 
-    public bool IsActionJustPressed(GameAction action)
-    {
-        var bind = InputBindings.Instance.GetBinding(action);
+    public Vector2 GetCameraMousePosition(Matrix cameraMatrix)
+        => Vector2.Transform(new Vector2(MousePosition.X, MousePosition.Y), Matrix.Invert(cameraMatrix));
 
-        return IsKeyJustPressed(bind.MainKey) &&
+    public Vector2 GetCameraPreviousMousePosition(Matrix cameraMatrix)
+        => Vector2.Transform(new Vector2(PreviousMousePosition.X, PreviousMousePosition.Y), Matrix.Invert(cameraMatrix));
+
+    public bool IsKeyBindJustPressed(string keyBind)
+    {
+        var bind = _store.TryGetKeyBind(keyBind);
+
+        return IsKeyJustPressed(bind.Key) &&
                (!bind.RequireCtrl || IsKeyPressed(Keys.LeftControl) || IsKeyPressed(Keys.RightControl)) &&
                (!bind.RequireShift || IsKeyPressed(Keys.LeftShift) || IsKeyPressed(Keys.RightShift)) &&
                (!bind.RequireAlt || IsKeyPressed(Keys.LeftAlt) || IsKeyPressed(Keys.RightAlt));
     }
 
-    public bool IsActionJustReleased(GameAction action)
+    public bool IsKeyBindJustReleased(string keyBind)
     {
-        var bind = InputBindings.Instance.GetBinding(action);
+        var bind = _store.TryGetKeyBind(keyBind);
 
-        return IsKeyJustReleased(bind.MainKey) &&
+        return IsKeyJustReleased(bind.Key) &&
                (!bind.RequireCtrl || IsKeyPressed(Keys.LeftControl) || IsKeyPressed(Keys.RightControl)) &&
                (!bind.RequireShift || IsKeyPressed(Keys.LeftShift) || IsKeyPressed(Keys.RightShift)) &&
                (!bind.RequireAlt || IsKeyPressed(Keys.LeftAlt) || IsKeyPressed(Keys.RightAlt));
     }
 
-    public bool IsActionPressed(GameAction action)
+    public bool IsKeyBindPressed(string keyBind)
     {
-        var bind = InputBindings.Instance.GetBinding(action);
+        var bind = _store.TryGetKeyBind(keyBind);
 
         return IsModifierComboPressed(
-            bind.MainKey,
+            bind.Key,
             bind.RequireCtrl,
             bind.RequireShift,
             bind.RequireAlt

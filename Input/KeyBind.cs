@@ -3,20 +3,12 @@ using System.Collections.Generic;
 
 namespace Hopeful.Input;
 
-public class KeyBind
+public readonly struct KeyBind(Keys key, bool ctrl = false, bool shift = false, bool alt = false)
 {
-    public Keys MainKey { get; set; }
-    public bool RequireCtrl { get; set; }
-    public bool RequireShift { get; set; }
-    public bool RequireAlt { get; set; }
-
-    public KeyBind(Keys key, bool ctrl = false, bool shift = false, bool alt = false)
-    {
-        MainKey = key;
-        RequireCtrl = ctrl;
-        RequireShift = shift;
-        RequireAlt = alt;
-    }
+    public readonly Keys Key = key;
+    public readonly bool RequireCtrl = ctrl;
+    public readonly bool RequireShift = shift;
+    public readonly bool RequireAlt = alt;
 
     public override string ToString()
     {
@@ -26,7 +18,7 @@ public class KeyBind
         if (RequireShift) parts.Add("Shift");
         if (RequireAlt) parts.Add("Alt");
 
-        parts.Add(MainKey.ToString());
+        parts.Add(Key.ToString());
 
         return string.Join("+", parts);
     }
