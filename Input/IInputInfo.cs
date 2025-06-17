@@ -3,7 +3,7 @@ using Microsoft.Xna.Framework.Input;
 
 namespace Hopeful.Input;
 
-public interface IInputListener
+public interface IInputInfo
 {
     Vector2 PreviousMousePosition { get; }
     Vector2 MousePosition { get; }
@@ -24,6 +24,7 @@ public interface IInputListener
     bool IsKeyJustReleased(Keys key);
     bool IsKeyComboPressed(params Keys[] keys);
     bool IsKeyComboLastPressed(params Keys[] keys);
-    bool IsModifierComboPressed(Keys mainKey, bool ctrl = false, bool shift = false, bool alt = false);
-    void Update();
+    KeyModifiers GetModifiersPressed();
+    Keys[] GetCurrentPressedKeys();
+    Keys[] GetPreviousPressedKeys();
 }

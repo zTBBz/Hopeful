@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Hopeful.Input;
 
 [Service]
-public class KeyBindStore : IDisposable
+public sealed class KeyBindStore : IDisposable
 {
     private readonly Dictionary<string, KeyBind> _defaultBinds = [];
     private Dictionary<string, KeyBind> _binds = [];
@@ -32,10 +32,6 @@ public class KeyBindStore : IDisposable
 
     public IReadOnlyDictionary<string, KeyBind> GetDefaultKeyBinds()
         => _defaultBinds;
-
-    private void SaveKeyBindings() { }
-
-    private void LoadKeyBindings() { }
 
     public void Dispose()
     {
