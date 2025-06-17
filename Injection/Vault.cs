@@ -86,14 +86,10 @@ public sealed class Vault : IDisposable
         }
 
         var sortedServices = graph.DfsSort(fist!);
-        const BindingFlags flag = BindingFlags.Public | BindingFlags.Instance;
         foreach (var serviceType in sortedServices)
         {
             var serviceInfo = services.First(s => s.Type == serviceType);
-
-            var methodInfo = typeof(Vault).GetMethod(nameof(ExtractService), flag, null, [typeof(object), typeof(bool)], null)!.MakeGenericMethod(serviceInfo.Type, serviceInfo.ServiceType ?? serviceInfo.Type);
-            methodInfo.Invoke(this, [serviceInfo.Key, true]);
-            //ExtractService(serviceInfo.Type, serviceInfo.ServiceType ?? serviceInfo.Type, serviceInfo.Key, true);
+            ExtractService(serviceInfo.Type, serviceInfo.ServiceType ?? serviceInfo.Type, serviceInfo.Key, true);
         }
 
         // Inject
@@ -108,13 +104,8 @@ public sealed class Vault : IDisposable
     public void LoadDecorators(Assembly assembly)
     {
         var decorators = FindDecorators(assembly);
-        const BindingFlags flag = BindingFlags.Public | BindingFlags.Instance;
         foreach (var (Key, DecoratorType, ServiceType) in decorators)
-        {
-            var methodInfo = typeof(Vault).GetMethod(nameof(ExtractDecorator), flag, null, [typeof(Func<object, object>), typeof(object)], null)!.MakeGenericMethod(ServiceType);
-            Func<object, object> factory = inner => Activator.CreateInstance(DecoratorType, [inner])!;
-            methodInfo.Invoke(this, [factory, Key]);
-        }
+            ExtractDecorator(ServiceType, inner => Activator.CreateInstance(DecoratorType, [inner])!, Key);
     }
 
     private static List<(Type Type, InjectionInfo[] Injections)> FindInjections(Assembly assembly)
@@ -203,21 +194,17 @@ public sealed class Vault : IDisposable
     public void ExtractService<TService, TServiceInstance>(object? key = null, bool skipInjection = false)
         => ExtractService<TService>(skipInjection ? Activator.CreateInstance<TServiceInstance>()! : Inject(Activator.CreateInstance<TServiceInstance>()!), key);
 
+    public void ExtractService(Type serviceType, Type instanceType, object? key = null, bool skipInjection = false)
+        => ExtractService(serviceType, skipInjection ? Activator.CreateInstance(instanceType)! : Inject(Activator.CreateInstance(instanceType)!), key);
+
     public void ExtractService<TService>(object serviceInstance, object? key = null) // maybe add check for serviceInstance nullabulity
+        => ExtractService(typeof(TService), serviceInstance, key);
+
+    public void ExtractService(Type serviceType, object serviceInstance, object? key = null)
     {
-        var serviceType = typeof(TService);
         var instanceType = serviceInstance.GetType();
         if (!serviceType.IsAssignableFrom(instanceType)) throw new InvalidOperationException($"Instance Type {instanceType} not assigned from Service Type {serviceType}.");
         if (!_services.TryAdd((key, serviceType), serviceInstance)) throw new InvalidOperationException($"Service Type {serviceType} with Key {key} already exist.");
-    }
-
-    public void ExtractDecorator<TService>(Func<object, object> decoratorFactory, object? serviceKey = null)
-    {
-        ArgumentNullException.ThrowIfNull(decoratorFactory);
-        var key = (serviceKey, typeof(TService));
-        _decorators.TryGetValue(key, out var list);
-        _decorators[key] = list ??= [];
-        list.Add(decoratorFactory);
     }
 
     public void ExtractDecorator<TService, TDecorator>(object? serviceKey = null)
@@ -226,6 +213,18 @@ public sealed class Vault : IDisposable
         var service = typeof(TService);
         var ctor = decorator.GetConstructor([service]) ?? throw new InvalidOperationException($"Decorator Type {decorator} must have constructor accepting {service}");
         ExtractDecorator<TService>(s => (TService)ctor.Invoke([s]), serviceKey);
+    }
+
+    public void ExtractDecorator<TService>(Func<object, object> decoratorFactory, object? serviceKey = null)
+    => ExtractDecorator(typeof(TService), decoratorFactory, serviceKey);
+
+    public void ExtractDecorator(Type serviceType, Func<object, object> decoratorFactory, object? serviceKey = null)
+    {
+        ArgumentNullException.ThrowIfNull(decoratorFactory);
+        var key = (serviceKey, serviceType);
+        _decorators.TryGetValue(key, out var list);
+        _decorators[key] = list ??= [];
+        list.Add(decoratorFactory);
     }
 
     public IEnumerable<KeyValuePair<Type, InjectionInfo[]>> Injections => _injections.AsEnumerable();
