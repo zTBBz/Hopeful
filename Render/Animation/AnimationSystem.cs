@@ -3,18 +3,12 @@ using Friflo.Engine.ECS.Systems;
 using Microsoft.Xna.Framework;
 using System;
 
-namespace Hopeful.Render.Animations;
+namespace Hopeful.Render.Animation;
 
-public class AnimationSystem : QuerySystem<Animator, Sprite>
+public sealed class AnimationSystem(Vault vault) : InjectQuerySystem<Animator, Sprite>(vault)
 {
     [Inject]
     private readonly GameCore _game = null!;
-
-    protected override void OnAddStore(EntityStore store)
-    {
-        GameCore.RootVault.Inject(this);
-        base.OnAddStore(store);
-    }
 
     protected override void OnUpdate()
         => Query.Each(new AnimateEach(_game.CurrentGameTime));
@@ -49,7 +43,7 @@ public readonly struct AnimateEach(GameTime gameTime) : IEach<Animator, Sprite>
         }
     }
 
-    private static void AdvanceFrame(ref Animator animator, ref Animation animation)
+    private static void AdvanceFrame(ref Animator animator, ref Animated animation)
     {
         //  Increment the current frame
         animation.CurrentFrame += GetFrameDirection(animation.IsReversed);

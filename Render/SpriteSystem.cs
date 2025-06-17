@@ -9,7 +9,7 @@ using System;
 
 namespace Hopeful.Render;
 
-public class SpriteRenderSystem : QuerySystem
+public sealed class SpriteSystem(Vault vault) : InjectBaseSystem(vault)
 {
     [Inject]
     private readonly AssetManager _assets = null!;
@@ -17,23 +17,18 @@ public class SpriteRenderSystem : QuerySystem
     [Inject]
     private readonly GlobalGraphics _graphics = null!;
 
-    protected override void OnAddStore(EntityStore store)
+    protected override void OnUpdateGroup()
     {
-        GameCore.RootVault.Inject(this);
-        base.OnAddStore(store);
-    }
+        var cameraQuery = Store.Query<Camera>();
 
-    protected override void OnUpdate()
-    {
-        var cameraQuery = Query.Store.Query<Camera>();
-
+        // Draw movable textures, with Camera Matrix
         foreach (var cameraEntity in cameraQuery.Entities)
         {
            var camera = cameraEntity.GetComponent<Camera>();
 
             if (!camera.IsActive) continue;
 
-            var viewedQuery = Query.Store.Query<Sprite, Viewed>();
+            var viewedQuery = Store.Query<Sprite, Viewed>();
 
             _graphics.SpriteBatch.Begin(transformMatrix: camera.TransformMatrix);
 
@@ -50,7 +45,8 @@ public class SpriteRenderSystem : QuerySystem
         // Draw "static" textures, without Camera Matrix
         _graphics.SpriteBatch.Begin();
 
-        foreach (var entity in Query.Entities)
+        var spriteQuery = Store.Query<Sprite>();
+        foreach (var entity in spriteQuery.Entities)
             Draw(ref entity.GetComponent<Sprite>(), entity);
 
         _graphics.SpriteBatch.End();
@@ -62,7 +58,7 @@ public class SpriteRenderSystem : QuerySystem
 
         var isAtlasSprite = GetSpriteData(sprite, entity, out var textureRect, out var texture);
 
-        UpdateSpriteCache(textureRect, isAtlasSprite ? null : texture, sprite, entity);
+        UpdateSpriteCache(textureRect, isAtlasSprite ? null : texture, entity);
 
         //if (texture is null) return;
 
@@ -100,6 +96,6 @@ public class SpriteRenderSystem : QuerySystem
         else return true;
     }
 
-    private static void UpdateSpriteCache(Rectangle? rect, Texture2D? texture, Sprite sprite, Entity entity)
+    private static void UpdateSpriteCache(Rectangle? rect, Texture2D? texture, Entity entity)
         => entity.AddComponent<SpriteCache>(new() { AtlasRect = rect, SingleTexture = texture });
 }
