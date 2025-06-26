@@ -1,8 +1,8 @@
 ﻿using Friflo.Engine.ECS;
 
-namespace Hopeful.Render.View;
+namespace Hopeful.Render.Views;
 
-public struct Viewed() : IComponent
+public struct View() : IComponent
 {
     public int CameraMask = 0b_0001;
 }

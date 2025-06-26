@@ -1,8 +1,8 @@
 using System;
 
-namespace Hopeful.Render.Animation;
+namespace Hopeful.Render.Animations;
 
-public readonly struct AnimatedFrame(string name, TimeSpan duration)
+public readonly struct AnimationFrame(string name, TimeSpan duration)
 {
     public string Name { get; } = name;
     public TimeSpan Duration { get; } = duration;

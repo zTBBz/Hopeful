@@ -2,7 +2,7 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Hopeful.Render.View;
+namespace Hopeful.Render.Views;
 
 public struct Camera(Viewport viewport, int mask = 0b_0001) : IComponent
 {

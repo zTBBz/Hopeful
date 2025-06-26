@@ -1,13 +1,13 @@
 using Hopeful.Utilities;
 using System;
 
-namespace Hopeful.Render.Animation;
+namespace Hopeful.Render.Animations;
 
-public struct Animated(string name, AnimatedFrame[] frames, bool isLooping, bool isReversed)
+public struct Animation(string name, AnimationFrame[] frames, bool isLooping, bool isReversed = false)
 {
     public readonly string Name = name;
     public int CurrentFrame;
-    public readonly AnimatedFrame[] Frames => frames;
+    public readonly AnimationFrame[] Frames => frames;
     public TimeSpan CurrentFrameTime = frames.IsNotEmpty() ? frames[0].Duration : TimeSpan.Zero;
     public readonly int FrameCount => Frames.Length;
     public bool IsLooping = isLooping;
