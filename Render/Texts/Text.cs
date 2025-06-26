@@ -1,28 +1,14 @@
 ﻿using Friflo.Engine.ECS;
 using Microsoft.Xna.Framework;
-using System;
 
 namespace Hopeful.Render.Texts;
 
-public struct Text : IComponent
+public struct Text(string text) : IComponent
 {
-    public string TextValue;
-    public string FontName;
-    public int FontSize;
-    public Vector2 Position;
-    public float Rotation;
-    public Color Color;
-
-    public Text(string text, string fontName, Vector2? position = null, Color? color = null, int fontSize = 14, float rotation = 0f)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(text);
-        ArgumentException.ThrowIfNullOrEmpty(fontName);
-
-        TextValue = text;
-        FontName = fontName;
-        FontSize = fontSize;
-        Position = (Vector2)(position == null ? Vector2.Zero : position);
-        Color = (Color)(color == null ? Color.White : color);
-        Rotation = rotation;
-    }
+    public string TextValue = text;
+    public string FontName = "Default";
+    public int FontSize = 14;
+    public Vector2 Position = Vector2.Zero;
+    public float Rotation = 0f;
+    public Color Color = Color.White;
 }

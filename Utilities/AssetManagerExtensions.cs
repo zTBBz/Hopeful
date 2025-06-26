@@ -1,5 +1,5 @@
-﻿using FontStashSharp;
-using Hopeful.Asset;
+﻿using Hopeful.Asset;
+using Hopeful.Asset.TextureAtlas;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -7,9 +7,6 @@ namespace Hopeful.Utilities;
 
 public static class AssetManagerExtensions
 {
-    [Inject]
-    private static readonly GlobalGraphics _graphics = null!;
-
     /// <summary>
     /// Attempts to retrieve a texture and its associated rectangle (if it exists in an atlas).
     /// </summary>
@@ -37,14 +34,14 @@ public static class AssetManagerExtensions
         rect = null;
         texture = null;
 
-        var atlas = _graphics.Texture2DAtlas!;
+        var atlas = manager.GetAsset<Texture2DAtlas>("GameAtlas");
         if (atlas.TryGetTextureRegion(textureId, out var region))
         {
             rect = region;
             texture = atlas.AtlasTexture;
             return true;
         }
-        else if (manager.TryGetAsset<Texture2D>(textureId, out var asset))
+        if (manager.TryGetAsset<Texture2D>(textureId, out var asset))
         {
             texture = asset;
             return true;
@@ -55,24 +52,7 @@ public static class AssetManagerExtensions
 
     public static Rectangle GetTextureRect(this AssetManager manager, string textureId)
     {
-        if (_graphics.Texture2DAtlas!.TryGetTextureRegion(textureId, out var region))
-            return region!.Value;
-
+        if (manager.GetAsset<Texture2DAtlas>("GameAtlas").TryGetTextureRegion(textureId, out var region)) return region!.Value;
         throw new AssetLoadException(textureId, "is not exist in texture atlas.");
-    }
-
-    public static SpriteFontBase GetFont(this AssetManager manager, string fontId, int fontSize)
-    {
-        if (manager.TryGetFont(fontId, fontSize, out var font))
-            return font!;
-        throw new AssetLoadException(fontId, $"{typeof(SpriteFontBase)} type is not loaded yet.");
-    }
-
-    public static bool TryGetFont(this AssetManager manager, string fontId, int fontSize, out SpriteFontBase? font)
-    {
-        font = null;
-        if (manager.TryGetAsset<FontSystem>(fontId, out var asset))
-            font = asset!.GetFont(fontSize);
-        return font != null;
     }
 }

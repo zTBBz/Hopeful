@@ -25,6 +25,12 @@ public static class PointExtensions
         return MathF.Sqrt(dx * dx + dy * dy);
     }
 
+    public static SixLabors.ImageSharp.Point ToSixLaborsPoint(this Point point)
+        => new (point.X, point.Y);
+
+    public static SixLabors.ImageSharp.Point ToSixLaborsPoint(this Vector2 vector)
+        => new((int)vector.X, (int)vector.Y);
+
     public static Point Clamp(this Point point, Point min, Point max)
         => new(Math.Clamp(point.X, min.X, max.X), Math.Clamp(point.Y, min.Y, max.Y));
 }
