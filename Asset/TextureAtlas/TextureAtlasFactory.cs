@@ -5,19 +5,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Hopeful.Asset;
-
-public interface ITextureAtlasFactory
-{
-    Texture2DAtlas CreateAtlas(List<(string name, Texture2D texture, Rectangle region)> data, int size);
-
-    List<Texture2DAtlas> PackTextures(List<(string name, Texture2D texture)> textures, int maxAtlasSize);
-}
+namespace Hopeful.Asset.TextureAtlas;
 
 [Service(typeof(ITextureAtlasFactory))]
 public class TextureAtlasFactory : ITextureAtlasFactory
 {
-    private readonly GlobalGraphics _graphics = GameCore.RootVault.InjectService<GlobalGraphics>();
+    [Inject]
+    private readonly GlobalGraphics _graphics = null!;
 
     public List<Texture2DAtlas> PackTextures(List<(string name, Texture2D texture)> textures, int maxAtlasSize)
     {
@@ -78,12 +72,8 @@ public class TextureAtlasFactory : ITextureAtlasFactory
             texture.GetData(textureData);
 
             for (int y = 0; y < texture.Height; y++)
-            {
                 for (int x = 0; x < texture.Width; x++)
-                {
                     colors[(region.Y + y) * size + region.X + x] = textureData[y * texture.Width + x];
-                }
-            }
         }
 
         atlasTexture.SetData(colors);

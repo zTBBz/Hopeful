@@ -8,7 +8,8 @@ namespace Hopeful.Asset.Loaders;
 [Service(AssetFormat.Shader)]
 public class ShaderLoader : IAssetLoader
 {
-    private readonly GlobalGraphics _graphics = GameCore.RootVault.InjectService<GlobalGraphics>();
+    [Inject]
+    private readonly GlobalGraphics _graphics = null!;
 
     public Task<object> Load(string path)
     {

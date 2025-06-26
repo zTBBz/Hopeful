@@ -6,19 +6,13 @@ using System.Linq;
 using System.Xml;
 using System.Xml.Linq;
 
-namespace Hopeful.Asset;
+namespace Hopeful.Asset.TextureAtlas;
 
-public class Texture2DAtlas : IDisposable
+public class Texture2DAtlas(Texture2D atlasTexture,  Dictionary<string, Rectangle> textures) : IDisposable
 {
-    public Texture2D AtlasTexture { get; }
+    public Texture2D AtlasTexture { get; } = atlasTexture;
 
-    private readonly Dictionary<string, Rectangle> _textures = new();
-
-    public Texture2DAtlas(Texture2D atlasTexture, Dictionary<string, Rectangle> textures)
-    {
-        AtlasTexture = atlasTexture;
-        _textures = textures;
-    }
+    private readonly Dictionary<string, Rectangle> _textures = textures;
 
     public bool TryGetTextureRegion(string textureName, out Rectangle? rect)
     {
@@ -52,10 +46,7 @@ public class Texture2DAtlas : IDisposable
         XDocument doc = XDocument.Load(xmlPath);
         var textureElements = doc.Root?.Elements("Texture");
 
-        if (textureElements == null || !textureElements.Any())
-        {
-            throw new InvalidOperationException("Invalid XML file or no textures defined.");
-        }
+        if (textureElements == null || !textureElements.Any()) throw new InvalidOperationException("Invalid XML file or no textures defined.");
 
         var textures = new Dictionary<string, Rectangle>();
         foreach (var element in textureElements)
