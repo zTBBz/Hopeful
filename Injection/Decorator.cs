@@ -13,5 +13,5 @@ public abstract class Decorator<T>(T inner)
     /// <summary>
     /// The decorated service instance.
     /// </summary>
-    protected readonly T _inner = inner;
+    protected readonly T Inner = inner;
 }

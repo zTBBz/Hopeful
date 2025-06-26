@@ -9,18 +9,20 @@ namespace Hopeful.Injection;
 
 public sealed class Vault : IDisposable
 {
-    public Vault? Parent => _parent;
-    private readonly Vault? _parent;
+    public readonly Vault? Parent;
 
     public Vault() { }
-    public Vault(Vault parent)
+    public Vault(Vault parent, VaultExportSettings settings = VaultExportSettings.Services)
     {
-        _parent = parent;
-        _services = Services.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+        Parent = parent;
+        if (settings.HasFlag(VaultExportSettings.Services))
+            _services = Services.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+        if (settings.HasFlag(VaultExportSettings.Decorators))
+            _decorators = Decorators.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
     }
 
     private readonly Dictionary<Type, InjectionInfo[]> _injections = []; // <ClientType, ClientTypeInjections[]>
-    private readonly Dictionary<(object? serviceKey, Type serviceType), object> _services = []; // <(ServiceKey, ServiceType (can be interface)), ServiceInstance>
+    private readonly Dictionary<(object? serviceKey, Type serviceType), object> _services = []; // <(ServiceKey, ServiceType (can was interface)), ServiceInstance>
     private readonly Dictionary<(object? serviceKey, Type serviceType), List<Func<object, object>>> _decorators = []; // Func<OriginalService, DecoratorService>
 
     public T CreateWithInjection<T>() where T : new()
@@ -67,12 +69,12 @@ public sealed class Vault : IDisposable
     {
         var services = FindServices(assembly);
         var graph = new Graph<Type>();
-        Type? fist = null;
+        Type? first = null;
 
         foreach (var service in services)
         {
             var type = service.ServiceType ?? service.Type;
-            fist ??= type;
+            first ??= type;
 
             graph.AddVertex(type);
 
@@ -85,7 +87,7 @@ public sealed class Vault : IDisposable
             }
         }
 
-        var sortedServices = graph.DfsSort(fist!);
+        var sortedServices = graph.DfsSort(first!);
         foreach (var serviceType in sortedServices)
         {
             var serviceInfo = services.First(s => s.Type == serviceType);
@@ -104,8 +106,8 @@ public sealed class Vault : IDisposable
     public void LoadDecorators(Assembly assembly)
     {
         var decorators = FindDecorators(assembly);
-        foreach (var (Key, DecoratorType, ServiceType) in decorators)
-            ExtractDecorator(ServiceType, inner => Activator.CreateInstance(DecoratorType, [inner])!, Key);
+        foreach (var (key, decoratorType, serviceType) in decorators)
+            ExtractDecorator(serviceType, inner => Activator.CreateInstance(decoratorType, [inner])!, key);
     }
 
     private static List<(Type Type, InjectionInfo[] Injections)> FindInjections(Assembly assembly)
@@ -115,13 +117,13 @@ public sealed class Vault : IDisposable
         List<(Type Type, InjectionInfo[] Injections)> list = [];
         List<InjectionInfo> typeList = [];
 
-        for (int i = 0; i < types.Length; i++)
+        for (var i = 0; i < types.Length; i++)
         {
             foreach (FieldInfo field in types[i].GetFields(anyFlags))
                 if (field.TryGetCustomAttribute(out InjectAttribute? attr))
                 {
                     IInjectionResolver resolver = new FieldInjectionResolver(field);
-                    bool isOptional = field.GetNullability() == Nullability.Nullable;
+                    var isOptional = field.GetNullability() == Nullability.Nullable;
                     typeList.Add(new(field.FieldType, resolver, isOptional, attr.DecoratorTargetType));
                 }
 
@@ -129,7 +131,7 @@ public sealed class Vault : IDisposable
                 if (property.TryGetCustomAttribute(out InjectAttribute? attr))
                 {
                     IInjectionResolver resolver = new PropertyInjectionResolver(property);
-                    bool isOptional = property.GetNullability() == Nullability.Nullable;
+                    var isOptional = property.GetNullability() == Nullability.Nullable;
                     typeList.Add(new(property.PropertyType, resolver, isOptional, attr.DecoratorTargetType));
                 }
 
@@ -197,7 +199,7 @@ public sealed class Vault : IDisposable
     public void ExtractService(Type serviceType, Type instanceType, object? key = null, bool skipInjection = false)
         => ExtractService(serviceType, skipInjection ? Activator.CreateInstance(instanceType)! : Inject(Activator.CreateInstance(instanceType)!), key);
 
-    public void ExtractService<TService>(object serviceInstance, object? key = null) // maybe add check for serviceInstance nullabulity
+    public void ExtractService<TService>(object serviceInstance, object? key = null)
         => ExtractService(typeof(TService), serviceInstance, key);
 
     public void ExtractService(Type serviceType, object serviceInstance, object? key = null)
@@ -212,7 +214,7 @@ public sealed class Vault : IDisposable
         var decorator = typeof(TDecorator);
         var service = typeof(TService);
         var ctor = decorator.GetConstructor([service]) ?? throw new InvalidOperationException($"Decorator Type {decorator} must have constructor accepting {service}");
-        ExtractDecorator<TService>(s => (TService)ctor.Invoke([s]), serviceKey);
+        ExtractDecorator<TService>(s => (TService)ctor.Invoke([s])!, serviceKey);
     }
 
     public void ExtractDecorator<TService>(Func<object, object> decoratorFactory, object? serviceKey = null)
