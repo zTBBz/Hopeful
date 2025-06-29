@@ -32,11 +32,13 @@ public sealed class Vault : IDisposable
         return instance;
     }
 
-    public object Inject(object clientInstance)
+    public object Inject(in object clientInstance)
     {
-        if (_injections.TryGetValue(clientInstance.GetType(), out var injections))
-            foreach (var injection in injections)
-                injection.Resolver.Resolve(injection, clientInstance, Resolve(injection));
+        if (!_injections.TryGetValue(clientInstance.GetType(), out var injections)) return clientInstance;
+
+        foreach (var injection in injections)
+            injection.Resolver.Resolve(injection, clientInstance, Resolve(injection));
+
         return clientInstance;
     }
 
@@ -44,15 +46,13 @@ public sealed class Vault : IDisposable
     {
         object? injection = null;
         var type = info.TypeToken;
-
-        if (type.TryGetCustomAttribute<ServiceAttribute>(out var service))
-            return info.DecoratorTargetType != null ? InjectService(type, info.DecoratorTargetType, service.Key) : InjectService(type, service.Key);
-
-        // If the injection is required, attempt to create it
+        var key = info.Key;
+        
         if (!info.IsOptional)
         {
-            if (type.IsInterface || type.IsAbstract) throw new InvalidOperationException();
-            injection = Activator.CreateInstance(type);
+            if (type.IsAbstract && !type.IsInterface) throw new InvalidOperationException();
+
+            injection = info.DecoratorTargetType != null ? InjectService(type, info.DecoratorTargetType, key) : InjectService(type, key);
         }
 
         return injection;
@@ -65,41 +65,43 @@ public sealed class Vault : IDisposable
             _injections.Add(type, injections);
     }
 
+    private Graph<Type> graph;
+
     public void LoadServices(Assembly assembly)
     {
         var services = FindServices(assembly);
-        var graph = new Graph<Type>();
-        Type? first = null;
+        graph = new Graph<Type>();
 
+        // Prepare graph
         foreach (var service in services)
+            graph.AddVertex(service.Type); // graph.AddVertex(service.ServiceType ?? service.Type); remove Interfaces from graph
+
+        // Add dependencies to graph
+        foreach (var (clientType, injections) in _injections)
         {
-            var type = service.ServiceType ?? service.Type;
-            first ??= type;
-
-            graph.AddVertex(type);
-
-            if (!_injections.TryGetValue(type, out var injections)) continue;
-            var innerServices = injections.Where(i => i.TypeToken.TryGetCustomAttribute<ServiceAttribute>(out _));
-            foreach (var inner in innerServices)
+            foreach (var injection in injections)
             {
-                graph.AddVertex(inner.TypeToken);
-                graph.AddEdge(type, inner.TypeToken);
+                if (graph.ContainsVertex(injection.TypeToken) || _services.TryGetValue((injection.Key, injection.TypeToken), out _))
+                    graph.AddEdge(injection.TypeToken, clientType);
             }
         }
 
-        var sortedServices = graph.DfsSort(first!);
-        foreach (var serviceType in sortedServices)
-        {
-            var serviceInfo = services.First(s => s.Type == serviceType);
-            ExtractService(serviceInfo.Type, serviceInfo.ServiceType ?? serviceInfo.Type, serviceInfo.Key, true);
-        }
+        var sortedServices = graph.DfsSort();
 
-        // Inject
+        // Extract and Inject inner services
         foreach (var serviceType in sortedServices)
         {
-            var serviceInfo = services.First(s => s.Type == serviceType);
-            var instance = _services[(serviceInfo.Key, serviceInfo.ServiceType ?? serviceInfo.Type)];
-            Inject(instance);
+            var serviceInfos = services.Where(s => s.Type == serviceType || serviceType.IsAssignableFrom(s.Type));
+            //var serviceInfos = services.Where(s => (s.ServiceType ?? s.Type) == serviceType || serviceType.IsAssignableFrom(s.ServiceType ?? s.Type));
+
+            foreach (var serviceInfo in serviceInfos)
+            {
+                var instance = Activator.CreateInstance(serviceInfo.Type)!;
+
+                ExtractService(serviceInfo.ServiceType ?? serviceInfo.Type, instance, serviceInfo.Key);
+
+                Inject(instance);
+            }
         }
     }
 
@@ -119,20 +121,20 @@ public sealed class Vault : IDisposable
 
         for (var i = 0; i < types.Length; i++)
         {
-            foreach (FieldInfo field in types[i].GetFields(anyFlags))
+            foreach (var field in types[i].GetFields(anyFlags))
                 if (field.TryGetCustomAttribute(out InjectAttribute? attr))
                 {
                     IInjectionResolver resolver = new FieldInjectionResolver(field);
                     var isOptional = field.GetNullability() == Nullability.Nullable;
-                    typeList.Add(new(field.FieldType, resolver, isOptional, attr.DecoratorTargetType));
+                    typeList.Add(new(field.FieldType, resolver, isOptional, attr.Key, attr.DecoratorTargetType));
                 }
 
-            foreach (PropertyInfo property in types[i].GetProperties(anyFlags))
+            foreach (var property in types[i].GetProperties(anyFlags))
                 if (property.TryGetCustomAttribute(out InjectAttribute? attr))
                 {
                     IInjectionResolver resolver = new PropertyInjectionResolver(property);
                     var isOptional = property.GetNullability() == Nullability.Nullable;
-                    typeList.Add(new(property.PropertyType, resolver, isOptional, attr.DecoratorTargetType));
+                    typeList.Add(new(property.PropertyType, resolver, isOptional, attr.Key, attr.DecoratorTargetType));
                 }
 
             if (typeList.IsNotEmpty())
@@ -144,7 +146,7 @@ public sealed class Vault : IDisposable
         return list;
     }
 
-    private static IEnumerable<(object? Key, Type Type, Type? ServiceType)> FindServices(Assembly assembly)
+    private static IEnumerable<(object? Key, Type Type, Type? ServiceType)> FindServices(Assembly assembly) // ServiceType is interface
         => assembly.GetTypes()
             .Where(t => t.IsClass && !t.IsAbstract)
             .Select(t => (Type: t, Attr: t.GetCustomAttribute<ServiceAttribute>()))
@@ -196,11 +198,8 @@ public sealed class Vault : IDisposable
     public void ExtractService<TService, TServiceInstance>(object? key = null, bool skipInjection = false)
         => ExtractService<TService>(skipInjection ? Activator.CreateInstance<TServiceInstance>()! : Inject(Activator.CreateInstance<TServiceInstance>()!), key);
 
-    public void ExtractService(Type serviceType, Type instanceType, object? key = null, bool skipInjection = false)
-        => ExtractService(serviceType, skipInjection ? Activator.CreateInstance(instanceType)! : Inject(Activator.CreateInstance(instanceType)!), key);
-
     public void ExtractService<TService>(object serviceInstance, object? key = null)
-        => ExtractService(typeof(TService), serviceInstance, key);
+        => ExtractService(serviceType: typeof(TService), serviceInstance: serviceInstance, key);
 
     public void ExtractService(Type serviceType, object serviceInstance, object? key = null)
     {

@@ -25,7 +25,7 @@ public sealed class ServiceAttribute : Attribute
     /// <param name="key">The key to distinguish this service from others of the same type.</param>
     public ServiceAttribute(object key) => Key = key;
     public ServiceAttribute(Type serviceType) => ServiceType = serviceType;
-    public ServiceAttribute(object key, Type serviceType)
+    public ServiceAttribute(object? key, Type serviceType)
     {
         Key = key;
         ServiceType = serviceType;
