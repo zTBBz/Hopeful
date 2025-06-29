@@ -4,12 +4,12 @@ namespace Hopeful.Input.Events;
 
 public readonly struct MouseEvent(bool mouseButton, bool isJustPressed, bool isJustReleased, Vector2 mousePosition)
 {
-    public readonly bool IsRightClick => !mouseButton;
-    public readonly bool IsLeftClick => mouseButton;
+    public bool IsRightClick => !mouseButton;
+    public bool IsLeftClick => mouseButton;
 
-    public static bool IsMouseButtonPressed => true;
-    public readonly bool IsMouseButtonJustPressed => isJustPressed;
-    public readonly bool IsMouseButtonJustReleased => isJustReleased;
+    public bool IsMouseButtonPressed => true;
+    public bool IsMouseButtonJustPressed => isJustPressed;
+    public bool IsMouseButtonJustReleased => isJustReleased;
 
-    public readonly Vector2 MousePosition => mousePosition;
+    public Vector2 MousePosition => mousePosition;
 }

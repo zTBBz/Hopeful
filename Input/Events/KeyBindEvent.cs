@@ -5,6 +5,6 @@ public readonly struct KeyBindEvent(string keyBind, bool isJustPressed, bool isJ
     public readonly string KeyBind = keyBind;
 
     public bool IsPressed => true;
-    public readonly bool IsJustPressed => isJustPressed;
-    public readonly bool IsJustReleased => isJustReleased;
+    public bool IsJustPressed => isJustPressed;
+    public bool IsJustReleased => isJustReleased;
 }

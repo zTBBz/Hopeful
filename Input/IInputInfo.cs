@@ -27,4 +27,6 @@ public interface IInputInfo
     KeyModifiers GetModifiersPressed();
     Keys[] GetCurrentPressedKeys();
     Keys[] GetPreviousPressedKeys();
+
+    void UpdateState(MouseState currentMouseState, KeyboardState currentKeyboardState);
 }

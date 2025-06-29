@@ -7,8 +7,8 @@ public readonly struct KeyEvent(Keys key, bool isJustPressed, bool isJustRelease
     public readonly Keys Key = key;
 
     public bool IsPressed => true;
-    public readonly bool IsJustPressed => isJustPressed;
-    public readonly bool IsJustReleased => isJustReleased;
+    public bool IsJustPressed => isJustPressed;
+    public bool IsJustReleased => isJustReleased;
 
     public readonly KeyModifiers KeyModifiers = modifiers;
 }

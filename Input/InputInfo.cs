@@ -1,33 +1,33 @@
-﻿using Friflo.Engine.ECS;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 
 namespace Hopeful.Input;
 
-[Service(typeof(IInputInfo))]
+[Service(null, typeof(IInputInfo))]
 public sealed class InputInfo : IInputInfo
 {
     [Inject]
     private readonly KeyBindStore _keyBinds = null!;
 
-    private readonly InputCache _input;
+    private MouseState _currentMouseState;
+    private MouseState _previousMouseState;
+    private KeyboardState _currentKeyboardState;
+    private KeyboardState _previousKeyboardState;
 
-    public InputInfo() => _input = GameCore.RootVault.InjectService<EntityStore>().GetUniqueEntity("Input").GetComponent<InputCache>();
-
-    public int ScrollWheelValue => _input.CurrentMouseState.ScrollWheelValue;
-    public int ScrollWheelDelta => _input.CurrentMouseState.ScrollWheelValue - _input.PreviousMouseState.ScrollWheelValue;
+    public int ScrollWheelValue => _currentMouseState.ScrollWheelValue;
+    public int ScrollWheelDelta => _currentMouseState.ScrollWheelValue - _previousMouseState.ScrollWheelValue;
     public bool HasScrolled => ScrollWheelDelta != 0;
 
-    public Vector2 PreviousMousePosition => new(_input.PreviousMouseState.X, _input.PreviousMouseState.Y);
-    public Vector2 MousePosition => new(_input.CurrentMouseState.X, _input.CurrentMouseState.Y);
+    public Vector2 PreviousMousePosition => new(_previousMouseState.X, _previousMouseState.Y);
+    public Vector2 MousePosition => new(_currentMouseState.X, _currentMouseState.Y);
 
-    public bool IsLeftMouseButtonPressed => _input.CurrentMouseState.LeftButton == ButtonState.Pressed;
-    public bool IsLeftMouseButtonJustPressed => _input.CurrentMouseState.LeftButton == ButtonState.Pressed && _input.PreviousMouseState.LeftButton == ButtonState.Released;
-    public bool IsLeftMouseButtonJustReleased => _input.CurrentMouseState.LeftButton == ButtonState.Released && _input.PreviousMouseState.LeftButton == ButtonState.Pressed;
+    public bool IsLeftMouseButtonPressed => _currentMouseState.LeftButton == ButtonState.Pressed;
+    public bool IsLeftMouseButtonJustPressed => _currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
+    public bool IsLeftMouseButtonJustReleased => _currentMouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed;
 
-    public bool IsRightMouseButtonPressed => _input.CurrentMouseState.RightButton == ButtonState.Pressed;
-    public bool IsRightMouseButtonJustPressed => _input.CurrentMouseState.RightButton == ButtonState.Pressed && _input.PreviousMouseState.RightButton == ButtonState.Released;
-    public bool IsRightMouseButtonJustReleased => _input.CurrentMouseState.RightButton == ButtonState.Released && _input.PreviousMouseState.RightButton == ButtonState.Pressed;
+    public bool IsRightMouseButtonPressed => _currentMouseState.RightButton == ButtonState.Pressed;
+    public bool IsRightMouseButtonJustPressed => _currentMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released;
+    public bool IsRightMouseButtonJustReleased => _currentMouseState.RightButton == ButtonState.Released && _previousMouseState.RightButton == ButtonState.Pressed;
 
     public Vector2 GetCameraMousePosition(Matrix cameraMatrix)
         => Vector2.Transform(new Vector2(MousePosition.X, MousePosition.Y), Matrix.Invert(cameraMatrix));
@@ -82,13 +82,13 @@ public sealed class InputInfo : IInputInfo
     }
 
     public bool IsKeyJustPressed(Keys key)
-        => _input.CurrentKeyboardState.IsKeyDown(key) && _input.PreviousKeyboardState.IsKeyUp(key);
+        => _currentKeyboardState.IsKeyDown(key) && _previousKeyboardState.IsKeyUp(key);
 
     public bool IsKeyJustReleased(Keys key)
-        => _input.CurrentKeyboardState.IsKeyUp(key) && _input.PreviousKeyboardState.IsKeyDown(key);
+        => _currentKeyboardState.IsKeyUp(key) && _previousKeyboardState.IsKeyDown(key);
 
     public bool IsKeyPressed(Keys key)
-        => _input.CurrentKeyboardState.IsKeyDown(key);
+        => _currentKeyboardState.IsKeyDown(key);
 
     public KeyModifiers GetModifiersPressed()
     {
@@ -107,8 +107,17 @@ public sealed class InputInfo : IInputInfo
     }
 
     public Keys[] GetCurrentPressedKeys()
-        => _input.CurrentKeyboardState.GetPressedKeys();
+        => _currentKeyboardState.GetPressedKeys();
 
     public Keys[] GetPreviousPressedKeys()
-        => _input.PreviousKeyboardState.GetPressedKeys();
+        => _previousKeyboardState.GetPressedKeys();
+
+    public void UpdateState(MouseState currentMouseState, KeyboardState currentKeyboardState)
+    {
+        _previousMouseState = _currentMouseState;
+        _currentMouseState = currentMouseState;
+
+        _previousKeyboardState = _currentKeyboardState;
+        _currentKeyboardState = currentKeyboardState;
+    }
 }

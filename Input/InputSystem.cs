@@ -5,35 +5,36 @@ using Microsoft.Xna.Framework.Input;
 
 namespace Hopeful.Input;
 
-public sealed class InputSystem(Vault vault) : InjectBaseSystem(vault)
+public sealed class InputSystem(Vault vault) : InjectBaseSystem(vault) // TODO: Maybe use TinyMessanger instead ECS.Friflo signal, because they dependent entity to emit event, I need anonymous events
 {
     [Inject]
-    private readonly InputInfo _info = null!;
+    private readonly IInputInfo _info = null!;
 
     [Inject]
     private readonly KeyBindStore _keyBinds = null!;
 
     protected override void OnUpdateGroup()
     {
-        var entity = Store.GetUniqueEntity("InputCache");
-        var input = entity.GetComponent<InputCache>();
+        UpdateState();
 
-        UpdateState(ref input);
+        var query = Store.Query().AnyTags(Tags.Get<InputListenerTag>());
 
-        TryEmitMouseClickEvent(entity);
-        TryEmitKeyboardEvents(entity);
+        foreach (var entity in query.Entities)
+        {
+            TryEmitMouseClickEvent(entity);
+            TryEmitKeyboardEvents(entity);
+        }
     }
 
     private void TryEmitMouseClickEvent(Entity entity)
     {
-        if (_info.IsLeftMouseButtonPressed || _info.IsRightMouseButtonPressed)
-        {
-            bool button = _info.IsLeftMouseButtonPressed && !_info.IsRightMouseButtonPressed; // left = true, right = false
-            bool isJustPressed = button ? _info.IsLeftMouseButtonJustPressed : _info.IsRightMouseButtonJustPressed;
-            bool isJustReleased = button ? _info.IsLeftMouseButtonJustReleased : _info.IsRightMouseButtonJustReleased;
+        if (!(_info.IsLeftMouseButtonPressed || _info.IsRightMouseButtonPressed)) return;
 
-            entity.EmitSignal<MouseEvent>(new(button, isJustPressed, isJustReleased, _info.MousePosition));
-        }
+        var button = _info.IsLeftMouseButtonPressed && !_info.IsRightMouseButtonPressed; // left = true, right = false
+        var isJustPressed = button ? _info.IsLeftMouseButtonJustPressed : _info.IsRightMouseButtonJustPressed;
+        var isJustReleased = button ? _info.IsLeftMouseButtonJustReleased : _info.IsRightMouseButtonJustReleased;
+
+        entity.EmitSignal<MouseEvent>(new(button, isJustPressed, isJustReleased, _info.MousePosition));
     }
 
     private void TryEmitKeyboardEvents(Entity entity)
@@ -45,7 +46,8 @@ public sealed class InputSystem(Vault vault) : InjectBaseSystem(vault)
     private void TryEmitKeyEvent(Entity entity)
     {
         var modifiers = _info.GetModifiersPressed();
-        var keys = _info.GetPreviousPressedKeys();
+        var keys = _info.GetCurrentPressedKeys(); // why previous?
+
         foreach (var key in keys)
             entity.EmitSignal<KeyEvent>(new(key, _info.IsKeyJustPressed(key), _info.IsKeyJustReleased(key), modifiers));
     }
@@ -62,12 +64,6 @@ public sealed class InputSystem(Vault vault) : InjectBaseSystem(vault)
         }
     }
 
-    private static void UpdateState(ref InputCache input)
-    {
-        input.PreviousMouseState = input.CurrentMouseState;
-        input.CurrentMouseState = Mouse.GetState();
-
-        input.PreviousKeyboardState = input.CurrentKeyboardState;
-        input.CurrentKeyboardState = Keyboard.GetState();
-    }
+    private void UpdateState()
+        => _info.UpdateState(Mouse.GetState(), Keyboard.GetState());
 }
