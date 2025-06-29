@@ -1,8 +1,9 @@
 ﻿using Microsoft.Xna.Framework;
-using System.Windows.Forms;
+//using System.Windows.Forms;
 
 namespace Hopeful.Utilities;
 
+/*
 public static class WindowExtensions
 {
     public static void Centralize(this GameWindow window)
@@ -17,3 +18,4 @@ public static class WindowExtensions
         window.Position = center;
     }
 }
+*/

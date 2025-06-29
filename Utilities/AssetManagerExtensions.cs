@@ -10,7 +10,6 @@ public static class AssetManagerExtensions
     /// <summary>
     /// Attempts to retrieve a texture and its associated rectangle (if it exists in an atlas).
     /// </summary>
-    /// <param name="manager">The <see cref="AssetManager"/> instance used for asset lookup.</param>
     /// <param name="textureId">The unique identifier of the texture to retrieve.</param>
     /// <param name="rect">
     ///     When this method returns, contains the rectangle defining the texture's region in the atlas (if found in the atlas);
@@ -29,18 +28,21 @@ public static class AssetManagerExtensions
     /// If the texture is standalone (not in the atlas), <paramref name="rect"/> will be <see langword="null"/>, and <paramref name="texture"/> will be the standalone texture.
     /// If the texture is not found, both <paramref name="rect"/> and <paramref name="texture"/> will be <see langword="null"/>.
     /// </remarks>
-    public static bool TryGetTexture(this AssetManager manager, string textureId, out Rectangle? rect, out Texture2D? texture)
+    public static bool TryGetTexture(this IAssetManager manager, string textureId, out Rectangle? rect, out Texture2D? texture)
     {
         rect = null;
         texture = null;
 
-        var atlas = manager.GetAsset<Texture2DAtlas>("GameAtlas");
-        if (atlas.TryGetTextureRegion(textureId, out var region))
+        if (manager.TryGetAsset<Texture2DAtlas>("GameAtlas", out var atlas))
         {
-            rect = region;
-            texture = atlas.AtlasTexture;
-            return true;
+            if (atlas.TryGetTextureRegion(textureId, out var region))
+            {
+                rect = region;
+                texture = atlas.AtlasTexture;
+                return true;
+            }
         }
+
         if (manager.TryGetAsset<Texture2D>(textureId, out var asset))
         {
             texture = asset;
@@ -50,7 +52,7 @@ public static class AssetManagerExtensions
         return false;
     }
 
-    public static Rectangle GetTextureRect(this AssetManager manager, string textureId)
+    public static Rectangle GetTextureRect(this IAssetManager manager, string textureId)
     {
         if (manager.GetAsset<Texture2DAtlas>("GameAtlas").TryGetTextureRegion(textureId, out var region)) return region!.Value;
         throw new AssetLoadException(textureId, "is not exist in texture atlas.");

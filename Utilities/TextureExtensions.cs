@@ -16,7 +16,7 @@ public static class TextureExtensions
         return texture;
     }
 
-    public static void SaveToDDS(this Texture2D texture, string outputPath, DXGI_FORMAT format)
+    public static void SaveAsDds(this Texture2D texture, string outputPath, DXGI_FORMAT format)
     {
         ArgumentNullException.ThrowIfNull(texture, nameof(texture));
         ArgumentNullException.ThrowIfNullOrEmpty(outputPath, nameof(outputPath));

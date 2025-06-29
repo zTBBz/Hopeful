@@ -158,15 +158,13 @@ public static class ReflectionExtensions
 
     [Pure]
     private static Nullability ParseNullableState(object? state)
-    {
-        return state switch
+        => state switch
         {
             byte b => (Nullability)b,
             ReadOnlyCollection<CustomAttributeTypedArgument> args
                             when args.IsNotEmpty() && args[0].Value is byte b => (Nullability)b,
             _ => Nullability.Unknown,
         };
-    }
 }
 
 /// <summary>

@@ -2,14 +2,13 @@
 
 namespace Hopeful.Utilities;
 
-public static class KeysExtension
+public static class KeysExtension // TODO: Make as Service, add support multi-languages
 {
     /// <summary>
     /// Converts a key to its char representation
     /// </summary>
     /// <param name="key"></param>
     /// <param name="isShiftDown"></param>
-    /// <returns></returns>
     public static char? ToChar(this Keys key, bool isShiftDown)
     {
         if (key == Keys.A) { return isShiftDown ? 'A' : 'a'; }
