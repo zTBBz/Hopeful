@@ -1,19 +1,19 @@
-﻿using Hopeful.Utilities;
-using Microsoft.Xna.Framework.Graphics;
-using System.IO;
-using System.Threading.Tasks;
+﻿using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Hopeful.Asset.Loaders;
 
-[Service(AssetFormat.Shader)]
-public class ShaderLoader : IAssetLoader
+[Service(AssetFormat.Shader, typeof(IAssetLoader))]
+public sealed class ShaderLoader : IAssetLoader
 {
     [Inject]
     private readonly GlobalGraphics _graphics = null!;
 
-    public Task<object> Load(string path)
+    public bool TryLoad(string path, [NotNullWhen(true)] out object? result)
     {
-        BinaryReader reader = new(File.Open(path, FileMode.Open));
-        return (Task<object>)(object)new Effect(_graphics.GraphicsDevice, reader.ReadBytes((int)reader.BaseStream.Length));
+        throw new NotImplementedException();
+
+        /*BinaryReader reader = new(File.Open(path, FileMode.Open));
+        return (Task<object>)(object)new Effect(_graphics.GraphicsDevice, reader.ReadBytes((int)reader.BaseStream.Length));*/
     }
 }

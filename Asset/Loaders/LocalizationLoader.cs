@@ -1,12 +1,12 @@
 ﻿using System;
-using System.Threading.Tasks;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Hopeful.Asset.Loaders;
 
-[Service(AssetFormat.Localization)]
-public class LocalizationLoader : IAssetLoader
+[Service(AssetFormat.Localization, typeof(IAssetLoader))]
+public sealed class LocalizationLoader : IAssetLoader
 {
-    public Task<object> Load(string path)
+    public bool TryLoad(string path, [NotNullWhen(true)] out object? result)
     {
         throw new NotImplementedException();
     }

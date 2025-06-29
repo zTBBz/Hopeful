@@ -1,7 +1,7 @@
-﻿using FontStashSharp;
-using Microsoft.Xna.Framework.Audio;
+﻿using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using System.IO;
+using SixLabors.Fonts;
 
 namespace Hopeful.Asset;
 
@@ -28,7 +28,7 @@ public static class AssetDetector
             nameof(Texture2D) => AssetFormat.Sprite.ToString(),
             nameof(SoundEffect) => AssetFormat.Audio.ToString(),
             nameof(SpriteEffect) => AssetFormat.Shader.ToString(),
-            nameof(FontSystem) => AssetFormat.Font.ToString(),
+            nameof(Font) => AssetFormat.Font.ToString(),
             _ => string.Empty,
         };
     }

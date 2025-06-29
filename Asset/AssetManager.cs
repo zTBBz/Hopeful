@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 
 namespace Hopeful.Asset;
 
-[Service(typeof(IAssetManager))]
 public sealed class AssetManager(Vault vault) : IAssetManager
 {
     private readonly ConcurrentDictionary<string, object> _assetsCache = new();
@@ -20,7 +19,7 @@ public sealed class AssetManager(Vault vault) : IAssetManager
 
     public async Task LoadAllAssetsAsync(string assetsDirectory)
     {
-        var assets = SortAssets(Directory.EnumerateFiles(PathHelper.GetAssetAbsolutePath(assetsDirectory)));
+        var assets = SortAssets(Directory.EnumerateFiles(PathHelper.GetAbsolutePath(assetsDirectory))); // not get assets from folders in Assets
 
         await Parallel.ForEachAsync(assets, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
             async (assetPath, token) =>
@@ -42,6 +41,9 @@ public sealed class AssetManager(Vault vault) : IAssetManager
             {
                 case ".atlas":
                     sorted.Insert(0, file);
+                    break;
+                default:
+                    sorted.Add(file);
                     break;
             }
         }
@@ -66,29 +68,17 @@ public sealed class AssetManager(Vault vault) : IAssetManager
         return asset != null;
     }
 
-    public async Task LoadAssetAsync(string assetPath)
+    public Task LoadAssetAsync(string assetPath)
     {
         ArgumentException.ThrowIfNullOrEmpty(assetPath, nameof(assetPath));
         PathHelper.ValidatePath(assetPath);
 
-        object? raw = null;
-        try
-        {
-            raw = await LoadRaw(assetPath);
-        }
-        finally
-        {
-            if (raw != null) _assetsCache.TryAdd(Path.GetFileNameWithoutExtension(assetPath), raw);
-        }
-    }
+        var loader = vault.InjectService<IAssetLoader>(AssetDetector.DetectFormat(assetPath));
+        if (!loader.TryLoad(assetPath, out var raw)) MainThread.EnqueueException(new AssetLoadException(assetPath, "invalid file format."));
 
-    private async Task<object> LoadRaw(string assetPath)
-    {
-        var format = AssetDetector.DetectFormat(assetPath);
-        var loader = vault.InjectService<IAssetLoader>(format);
-        var raw = await loader.Load(assetPath);
+        _assetsCache.TryAdd(Path.GetFileNameWithoutExtension(assetPath), raw!);
 
-        return raw ?? throw new AssetLoadException(assetPath, "invalid file format.");
+        return Task.CompletedTask;
     }
 
     public void Dispose()

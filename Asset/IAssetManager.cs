@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 
 namespace Hopeful.Asset;
@@ -12,5 +13,5 @@ public interface IAssetManager : IDisposable
     Task LoadAllAssetsAsync(string assetsDirectory);
     Task LoadAssetAsync(string assetPath);
     T GetAsset<T>(string assetId) where T : class;
-    bool TryGetAsset<T>(string assetId, out T? asset) where T : class;
+    bool TryGetAsset<T>(string assetId, [NotNullWhen(true)] out T? asset) where T : class;
 }

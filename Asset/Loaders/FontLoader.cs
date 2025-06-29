@@ -1,31 +1,22 @@
 ﻿using SixLabors.Fonts;
-using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using System.Threading.Tasks;
 
 namespace Hopeful.Asset.Loaders;
 
-[Service(AssetFormat.Font)]
-public class FontLoader : IAssetLoader
+[Service(AssetFormat.Font, typeof(IAssetLoader))]
+public sealed class FontLoader : IAssetLoader
 {
-    public Task<object> Load(string path)
+    public bool TryLoad(string path, [NotNullWhen(true)] out object? result)
     {
+        result = null;
         if (Path.GetExtension(path).ToLowerInvariant() is ".ttf")
         {
-            var fontCollection = new FontCollection();
-            var fontFamily = fontCollection.Add(path);
-            return (Task<object>)(object)fontFamily.CreateFont(16);
-            
-
-            // Add ExistingTexture and ExistingTextureUsedSpace for more perfomance (https://discord.com/channels/766725034445635634/781597343387746355/1373375795476562011)
-            /*var fontSystem = new FontSystem(settings);
-            BinaryReader reader = new(File.Open(path, FileMode.Open));
-            var data = reader.BaseStream.ToByteArray();
-            fontSystem.AddFont(data);
-
-            return (Task<object>)(object)fontSystem;*/
+            var fontFamily = new FontCollection().Add(path);
+            result = fontFamily.CreateFont(16);
+            return true;
         }
 
-        throw new Exception();
+        return false;
     }
 }
