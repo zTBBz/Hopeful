@@ -3,37 +3,70 @@ using Hopeful.Input;
 using Hopeful.Input.Events;
 using Hopeful.Render;
 using Hopeful.Render.Texts;
-using Hopeful.Render.View;
+using Hopeful.Render.Views;
 using Hopeful.Utilities;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using System;
 
 namespace Hopeful.UI;
 
-public sealed class VisualBuilder(Entity entity, Visual visual, Sprite sprite)
+public sealed class VisualBuilder(in Entity entity)
 {
     private readonly Entity _entity = entity;
-    private readonly Visual _visual = visual;
-    private readonly Sprite _sprite = sprite;
+    private Visual _visual = new();
+    private Sprite _sprite = new();
 
-    public static VisualBuilder Setup(Entity entity)
+    public static VisualBuilder Setup(in Entity entity)
     {
         entity.Enabled = false;
-        return new(entity, entity.GetOrAddComponent<Visual>(), entity.GetOrAddComponent<Sprite>());
+        entity.AddTag<VisualDirtyTag>();
+        return new(entity);
     }
-        
-    public void Save() => entity.Enabled = true;
 
-    // Make more user-friendly mask settings
-    public VisualBuilder AsViewed(int cameraMask = 0b_0001)
+    public void Save()
     {
-        _entity.AddComponent<Viewed>(new() { CameraMask = cameraMask });
+        _entity.AddComponent(_visual);
+        _entity.AddComponent(_sprite);
+        _entity.Enabled = true;
+    }
+
+    public VisualBuilder WithSprite(string spriteName)
+    {
+        ArgumentNullException.ThrowIfNullOrEmpty(spriteName);
+        _sprite.SpriteName = spriteName;
         return this;
     }
 
-    public VisualBuilder WithText(string text, string? fontName = null)
+    public VisualBuilder WithSize(Vector2 size)
     {
-        _entity.AddComponent<Text>(new(text, fontName ?? "Default"));
+        _visual.Size = size;
+        return this;
+    }
+
+    public VisualBuilder AsViewed(CameraMask mask)
+    {
+        _entity.AddComponent<View>(new() { CameraMask = (int)mask });
+        return this;
+    }
+
+    public VisualBuilder WithText(string text, string? fontName = null, int fontSize = 14, Vector2? position = null, Color? color = null, float rotation = 0f)
+    {
+        ArgumentNullException.ThrowIfNullOrEmpty(text);
+        
+        var textComponent = new Text(text);
+        if (fontName != null) textComponent.FontName = fontName;
+        textComponent.FontSize = fontSize;
+        if (position != null) textComponent.Position = (Vector2)position;
+        textComponent.Rotation = rotation;
+        if (color != null) textComponent.Color = (Color)color;
+        _entity.AddComponent(textComponent);
+        return this;
+    }
+
+    public VisualBuilder AsInputListener()
+    {
+        _entity.AddTag<InputListenerTag>();
         return this;
     }
 
@@ -93,13 +126,27 @@ public sealed class VisualBuilder(Entity entity, Visual visual, Sprite sprite)
                 action.Invoke(visual);
         });
 
-    public VisualBuilder OnMouseClick(Action<MouseEvent, VisualEvent> action) => OnEvent(action);
-    public VisualBuilder OnKey(Action<KeyEvent, VisualEvent> action) => OnEvent(action);
-    public VisualBuilder OnKeyBind(Action<KeyBindEvent, VisualEvent> action) => OnEvent(action);
+    public VisualBuilder OnMouseClick(Action<MouseEvent, VisualEvent> action)
+    {
+        AsInputListener();
+        return OnEvent(action);
+    }
+
+    public VisualBuilder OnKey(Action<KeyEvent, VisualEvent> action)
+    {
+        AsInputListener();
+        return OnEvent(action);
+    }
+
+    public VisualBuilder OnKeyBind(Action<KeyBindEvent, VisualEvent> action)
+    {
+        AsInputListener();
+        return OnEvent(action);
+    }
 
     public VisualBuilder OnEvent<TEvent>(Action<TEvent, VisualEvent> action) where TEvent : struct
     {
-        _entity.AddSignalHandler<TEvent>((s) => action.Invoke(s.Event, new(s.Entity, _entity, _visual, _sprite)));
+        _entity.AddSignalHandler<TEvent>(s => action.Invoke(s.Event, new(s.Entity, _entity, _visual, _sprite)));
         return this;
     }
 }
