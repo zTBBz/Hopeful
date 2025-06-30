@@ -2,7 +2,7 @@
 
 namespace Hopeful.Utilities;
 
-public static class KeysExtension // TODO: Make as Service, add support multi-languages
+public static class KeysExtension // TODO: Make as Service, add support multi-languages (https://discord.com/channels/766725034445635634/781597343387746355/1389217492634828800)
 {
     /// <summary>
     /// Converts a key to its char representation

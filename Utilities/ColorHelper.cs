@@ -1,7 +1,7 @@
 ﻿using System;
 using SixLabors.ImageSharp;
 
-namespace Hopeful.Render.Texts.Formats;
+namespace Hopeful.Utilities;
 
 public static class ColorHelper
 {
