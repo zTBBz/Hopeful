@@ -18,6 +18,7 @@
 ✔ Discuss major changes in Issues  
 ✔ Follow [project philosophy](PHILOSOPHY.md)  
 ✔ Keep PRs clean
+
 Docs/typo fixes welcome without discussion.
 
 ## Source Code
