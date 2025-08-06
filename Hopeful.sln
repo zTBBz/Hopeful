@@ -1,15 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.12.35707.178
+VisualStudioVersion = 17.14.36212.18
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hopeful", "Hopeful\Hopeful.csproj", "{6A58BB2B-EA96-7063-26AB-3023FFCB8B0D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hopeful.Tests", "Hopeful.Tests\Hopeful.Tests.csproj", "{9C48D26A-3E25-8203-9D3A-F147303E8B39}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hopeful.GameTests", "Hopeful.GameTests\Hopeful.GameTests.csproj", "{8EE8898B-09B8-0437-65BE-8A9BF650F429}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hopeful.Sybil", "Hopeful.Sybil\Hopeful.Sybil\Hopeful.Sybil.csproj", "{685AC89C-2A06-C19E-601F-DB276CD237CE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -29,15 +27,11 @@ Global
 		{8EE8898B-09B8-0437-65BE-8A9BF650F429}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8EE8898B-09B8-0437-65BE-8A9BF650F429}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8EE8898B-09B8-0437-65BE-8A9BF650F429}.Release|Any CPU.Build.0 = Release|Any CPU
-		{685AC89C-2A06-C19E-601F-DB276CD237CE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{685AC89C-2A06-C19E-601F-DB276CD237CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{685AC89C-2A06-C19E-601F-DB276CD237CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{685AC89C-2A06-C19E-601F-DB276CD237CE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {537F907B-FE30-4CF1-A40B-403EFBF350C7}
+		SolutionGuid = {90C0614D-1223-4E4D-B942-4D9F42538ACA}
 	EndGlobalSection
 EndGlobal
