@@ -1,0 +1,6 @@
+[submodule "Internal/Hopeful.Hyperlinq"]
+	path = Internal/Hopeful.Hyperlinq
+	url = https://github.com/zTBBz/Hopeful.Hyperlinq
+[submodule "Internal/Hopeful.Sybil"]
+	path = Internal/Hopeful.Sybil
+	url = https://github.com/zTBBz/Hopeful.Sybil
